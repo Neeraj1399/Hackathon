@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../api/axiosInstance';
-import { Mail, ArrowLeft, ShieldCheck, CheckCircle, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Mail, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,53 +15,78 @@ const ForgotPassword = () => {
     setMessage('');
     setError('');
     try {
-      const res = await API.post('/auth/forgot-password', { email });
-      setMessage(res.data.message); // This will now be the "admin approval" message
+      await API.post('auth/forgot-password', { email });
+      setMessage('Recovery request sent. Check your inbox.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit request');
+      setError(err.response?.data?.message || 'Recovery request failed.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-      <div className="mesh-glow" />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="athiva-card responsive-card-padding w-full max-w-md" style={{ padding: '48px', position: 'relative', zIndex: 10, backgroundColor: 'rgba(5,5,5,0.8)', backdropFilter: 'blur(10px)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ width: '56px', height: '56px', backgroundColor: '#A3FF12', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', transform: 'rotate(-5deg)' }}>
-            <ShieldCheck size={28} color="black" />
+    <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 bg-brand-primary text-white rounded-lg flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-brand-primary/20">
+            A
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.04em', color: 'white', marginBottom: '12px' }}>Access Recovery.</h1>
-          <p style={{ color: '#666', fontWeight: 500 }}>Identify yourself to reset your credentials</p>
+          <h1 className="text-2xl font-bold text-brand-text-primary">Reset Password</h1>
+          <p className="text-sm text-brand-text-secondary font-medium">Recover your account access</p>
         </div>
 
-        {message ? (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center', padding: '16px', backgroundColor: 'rgba(163,255,18,0.05)', border: '1px solid rgba(163,255,18,0.2)', borderRadius: '20px', color: '#A3FF12' }}>
-            <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '24px' }}>{message}</p>
-            <Link to="/login" className="athiva-button" style={{ width: '100%', justifyContent: 'center' }}>Return to Portal</Link>
-          </motion.div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            {error && (
-              <div style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', fontSize: '13px', fontWeight: 600 }}>{error}</div>
-            )}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Work Email</label>
-              <div style={{ position: 'relative' }}>
-                <Mail style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                <input type="email" required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
+        <div className="bg-white border border-brand-border rounded-lg p-8 shadow-sm">
+          {message && (
+            <div className="p-4 bg-green-50 border border-green-100 rounded-md text-green-700 text-sm font-medium flex items-center gap-2 mb-6">
+               <CheckCircle size={16} /> {message}
             </div>
-            <button type="submit" disabled={isLoading} className="athiva-button" style={{ width: '100%', padding: '16px', justifyContent: 'center', marginBottom: '24px' }}>
-              {isLoading ? 'Processing...' : 'Request Recovery Signal'}
-            </button>
-            <Link to="/login" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#666', textDecoration: 'none', fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <ArrowLeft size={16} /> Back to Sign In
+          )}
+          
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-md text-brand-danger text-sm font-medium flex items-center gap-2 mb-6">
+               <AlertCircle size={16} /> {error}
+            </div>
+          )}
+
+          {!message && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <p className="text-brand-text-secondary text-xs font-medium leading-relaxed">
+                Enter your work email address and we'll send you a link to reset your password.
+              </p>
+              <div className="form-group">
+                <label className="label-enterprise">Work Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
+                  <input 
+                    type="email" 
+                    required 
+                    className="input-enterprise pl-10" 
+                    placeholder="name@company.com" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  type="submit" 
+                  disabled={isLoading} 
+                  className="w-full btn-primary !py-3 font-bold uppercase tracking-widest text-xs"
+                >
+                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="mt-8 pt-8 border-t border-brand-border text-center">
+            <Link to="/login" className="inline-flex items-center gap-2 text-brand-text-primary font-bold hover:text-brand-primary transition-colors text-xs uppercase tracking-wider">
+               <ArrowLeft size={14} /> Back to Sign In
             </Link>
-          </form>
-        )}
-      </motion.div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

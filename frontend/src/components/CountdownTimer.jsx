@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CountdownTimer = ({ deadline }) => {
+const CountdownTimer = ({ deadline, isMini = false }) => {
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   function calculateTimeLeft() {
@@ -35,23 +35,25 @@ const CountdownTimer = ({ deadline }) => {
     }
 
     timerComponents.push(
-      <span key={interval} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '40px' }}>
-        <span style={{ fontSize: '24px', fontWeight: 900, color: '#A3FF12', lineHeight: 1 }}>
-          {timeLeft[interval].toString().padStart(2, '0')}
+      <div key={interval} className="flex flex-col items-center min-w-[32px]">
+        <span className={`font-black text-brand-dark tabular-nums ${isMini ? 'text-[13px]' : 'text-2xl'} leading-none`}>
+          {timeLeft[interval].toString().padStart(2, '0')}{isMini && interval === 'days' ? 'd' : isMini && interval === 'hours' ? 'h' : isMini && interval === 'minutes' ? 'm' : ''}
         </span>
-        <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#444', letterSpacing: '0.05em', marginTop: '4px' }}>
-          {interval}
-        </span>
-      </span>
+        {!isMini && (
+          <span className="text-[9px] font-black uppercase text-brand-secondary/50 tracking-widest mt-1.5">
+            {interval}
+          </span>
+        )}
+      </div>
     );
   });
 
   if (timerComponents.length === 0) {
-    return <div style={{ fontSize: '14px', fontWeight: 800, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Deadline Passed</div>;
+    return <div className="text-[10px] font-black text-brand-danger uppercase tracking-widest py-0.5 px-2 bg-brand-danger/5 rounded border border-brand-danger/10">Protocol Sunset</div>;
   }
 
   return (
-    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+    <div className={`flex items-center ${isMini ? 'gap-1.5' : 'gap-4'}`}>
       {timerComponents}
     </div>
   );

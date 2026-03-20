@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/axiosInstance';
-import Navbar from '../components/Navbar';
-import { Calendar, Clock, Layout, ArrowLeft, Trophy, ListChecks, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Plus, AlertCircle } from 'lucide-react';
 
 const CreateHackathon = () => {
   const [formData, setFormData] = useState({ 
@@ -26,89 +24,111 @@ const CreateHackathon = () => {
       await API.post('hackathons', formData);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to initialize track');
+      setError(err.response?.data?.message || 'Failed to initialize track registry.');
     } finally { setLoading(false); }
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000', position: 'relative' }}>
-      <div className="mesh-glow" />
-      <Navbar />
-      <main className="responsive-main" style={{ maxWidth: '800px', margin: '0 auto', padding: '64px 24px' }}>
-        <button onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '40px', padding: 0 }}>
-          <ArrowLeft size={16} /> Back to track list
+    <div className="max-w-2xl mx-auto space-y-8 pb-20">
+      <header>
+        <button 
+          onClick={() => navigate(-1)} 
+          className="flex items-center gap-2 text-xs font-bold text-brand-text-secondary hover:text-brand-primary uppercase tracking-widest mb-6 transition-colors"
+        >
+          <ArrowLeft size={14} /> Back to Dashboard
         </button>
+        <h1 className="text-xl font-bold text-brand-text-primary">Host New Hackathon</h1>
+        <p className="text-sm text-brand-text-secondary mt-1">Set up the details, rules, and timeline for your innovation event.</p>
+      </header>
 
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="athiva-card responsive-card-padding" style={{ padding: '48px', backgroundColor: 'rgba(15,15,15,0.8)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '48px' }}>
-            <div style={{ width: '56px', height: '56px', backgroundColor: '#A3FF12', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'rotate(-5deg)' }}>
-              <Trophy style={{ width: '28px', height: '28px', color: 'black' }} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '32px', fontWeight: 900, color: 'white', letterSpacing: '-0.03em' }}>Launch <span style={{ color: '#A3FF12' }}>Track.</span></h1>
-              <p style={{ color: '#666', fontWeight: 500, fontSize: '16px' }}>Define the parameters for your next innovation cycle in the Athiva ecosystem.</p>
-            </div>
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 rounded-md text-brand-danger text-sm font-medium flex items-center gap-2">
+           <AlertCircle size={16} /> {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white border border-brand-border rounded-lg p-8 shadow-sm space-y-6">
+        <div className="form-group">
+          <label className="label-enterprise">Hackathon Title</label>
+          <input 
+            type="text" 
+            required 
+            className="input-enterprise" 
+            placeholder="e.g. Strategic Data Framework v2" 
+            value={formData.title} 
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })} 
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label-enterprise">Event Description & Abstract</label>
+          <textarea 
+            required 
+            rows={4} 
+            className="input-enterprise resize-none" 
+            placeholder="Define the problem space and expected deliverables..." 
+            value={formData.description} 
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label-enterprise">Hackathon Rules</label>
+          <textarea 
+            required 
+            rows={3} 
+            className="input-enterprise resize-none" 
+            placeholder="Specify eligibility and constraints..." 
+            value={formData.rules} 
+            onChange={(e) => setFormData({ ...formData, rules: e.target.value })} 
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="form-group">
+            <label className="label-enterprise">Start Date</label>
+            <input 
+              type="datetime-local" 
+              required 
+              className="input-enterprise" 
+              value={formData.startDate} 
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} 
+            />
           </div>
+          <div className="form-group">
+            <label className="label-enterprise">End Date</label>
+            <input 
+              type="datetime-local" 
+              required 
+              className="input-enterprise" 
+              value={formData.endDate} 
+              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} 
+            />
+          </div>
+        </div>
 
-          {error && (
-            <div style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '16px', borderRadius: '12px', marginBottom: '32px', fontSize: '14px', fontWeight: 600 }}>{error}</div>
-          )}
+        <div className="form-group border-t border-brand-border pt-6">
+          <label className="label-enterprise text-brand-primary">Submission Deadline</label>
+          <input 
+            type="datetime-local" 
+            required 
+            className="input-enterprise border-brand-primary/20 focus:border-brand-primary" 
+            value={formData.submissionDeadline} 
+            onChange={(e) => setFormData({ ...formData, submissionDeadline: e.target.value })} 
+          />
+          <p className="text-[11px] text-brand-text-secondary mt-2">Entries will be automatically locked at this timestamp.</p>
+        </div>
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Track Title</label>
-              <div style={{ position: 'relative' }}>
-                <Layout style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                <input type="text" required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="e.g., Q3 Financial Optimization" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Context & Objective</label>
-              <textarea required rows={4} className="athiva-input" style={{ padding: '16px' }} placeholder="Describe the problem space..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-            </div>
-
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Operating Rules</label>
-              <div style={{ position: 'relative' }}>
-                <ListChecks style={{ position: 'absolute', left: '16px', top: '16px', color: '#444', width: '20px', height: '20px' }} />
-                <textarea required rows={3} className="athiva-input" style={{ padding: '16px 16px 16px 52px' }} placeholder="Submission criteria, constraints, and eligibility..." value={formData.rules} onChange={(e) => setFormData({ ...formData, rules: e.target.value })} />
-              </div>
-            </div>
-
-            <div className="responsive-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Activation Date</label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                  <input type="datetime-local" required className="athiva-input" style={{ paddingLeft: '52px' }} value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Sunset Date</label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                  <input type="datetime-local" required className="athiva-input" style={{ paddingLeft: '52px' }} value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} />
-                </div>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '48px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Final Submission Deadline</label>
-              <div style={{ position: 'relative' }}>
-                <Clock style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                <input type="datetime-local" required className="athiva-input" style={{ paddingLeft: '52px' }} value={formData.submissionDeadline} onChange={(e) => setFormData({ ...formData, submissionDeadline: e.target.value })} />
-              </div>
-            </div>
-
-            <div style={{ paddingTop: '32px', borderTop: '1px solid #1A1A1A' }}>
-              <button type="submit" disabled={loading} className="athiva-button" style={{ width: '100%', padding: '16px', justifyContent: 'center' }}>
-                {loading ? 'Initializing...' : 'Deploy Track Event'} <ArrowRight size={20} />
-              </button>
-            </div>
-          </form>
-        </motion.div>
-      </main>
+        <div className="pt-4">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full btn-primary !py-3 flex justify-center items-center gap-2 font-bold uppercase tracking-widest text-xs"
+          >
+            {loading ? 'Initializing...' : <><Plus size={16} /> Launch Hackathon</>}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

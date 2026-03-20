@@ -96,3 +96,18 @@ exports.getHackathonSubmissions = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+// @desc    Get all submissions (for Admin global activity feed)
+// @route   GET /api/submissions
+// @access  Private (Admin)
+exports.getAllSubmissions = async (req, res) => {
+  try {
+    const submissions = await Submission.find()
+      .populate('userId', 'name email')
+      .populate('hackathonId', 'title')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    res.status(200).json({ success: true, count: submissions.length, data: submissions });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};

@@ -99,3 +99,27 @@ exports.getLeaderboard = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+// @desc    Get evaluations for the current user's submission
+// @route   GET /api/evaluations/my/:submissionId
+// @access  Private (Participant)
+exports.getMyEvaluation = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+
+    // Verify submission belongs to user
+    const submission = await Submission.findById(submissionId);
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    if (submission.userId.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view these evaluations' });
+    }
+
+    const evaluations = await Evaluation.find({ submissionId }).populate('judgeId', 'name');
+    res.status(200).json({ success: true, count: evaluations.length, data: evaluations });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};

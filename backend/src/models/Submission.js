@@ -25,6 +25,7 @@ const submissionSchema = new mongoose.Schema({
     required: [true, 'Please add a GitHub link']
   },
   demoLink: String,
+  techStack: String,
   submittedAt: {
     type: Date,
     default: Date.now

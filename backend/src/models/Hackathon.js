@@ -4,7 +4,6 @@ const hackathonSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Please add a title'],
-    unique: true,
     trim: true
   },
   description: {
@@ -40,19 +39,6 @@ const hackathonSchema = new mongoose.Schema({
     {
       type: mongoose.Schema.ObjectId,
       ref: 'User'
-    }
-  ],
-  judgeRequests: [
-    {
-      user: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'User'
-      },
-      status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
-      }
     }
   ],
   createdAt: {

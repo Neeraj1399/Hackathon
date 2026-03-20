@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api/axiosInstance';
-import { Megaphone, Trash2, Plus } from 'lucide-react';
+import { Megaphone, Trash2, Plus, X, Bell, Calendar, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Announcements = ({ user }) => {
   const [announcements, setAnnouncements] = useState([]);
@@ -31,84 +32,122 @@ const Announcements = ({ user }) => {
       setShowForm(false);
       fetchAnnouncements();
     } catch (err) {
-      alert('Error creating announcement');
+      alert('Registry broadcast failed.');
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this announcement?')) {
+    if (window.confirm('Strike this announcement from the registry?')) {
       try {
         await API.delete(`announcements/${id}`);
         fetchAnnouncements();
       } catch (err) {
-        alert('Delete failed');
+        alert('Deprovisioning failed.');
       }
     }
   };
 
   return (
     <section className="mb-12">
-      <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Megaphone className="text-indigo-500" /> Announcements
+      <div className="flex justify-between items-center mb-6 pb-4 border-b border-brand-border">
+        <h2 className="text-xl font-bold text-brand-dark flex items-center gap-3">
+          <Bell className="text-brand-primary" size={20} /> Corporate Broadcasts
         </h2>
         {user?.role === 'admin' && (
           <button
             onClick={() => setShowForm(!showForm)}
-            className="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1"
+            className={`btn-primary !py-1.5 !px-4 !text-xs flex items-center gap-2 transition-all ${showForm ? '!bg-brand-danger shadow-brand-danger/20' : ''}`}
           >
-            {showForm ? 'Cancel' : <><Plus size={14} /> New</>}
+            {showForm ? <><X size={14} /> Close</> : <><Plus size={14} /> New Entry</>}
           </button>
         )}
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-8 bg-gray-900 p-6 rounded-xl border border-gray-800">
-          <input
-            type="text"
-            placeholder="Announcement Title"
-            className="w-full bg-black border border-gray-700 text-white px-4 py-2 rounded mb-4 focus:ring-1 focus:ring-indigo-500"
-            value={newAnnouncement.title}
-            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-            required
-          />
-          <textarea
-            placeholder="Message..."
-            className="w-full bg-black border border-gray-700 text-white px-4 py-2 rounded mb-4 focus:ring-1 focus:ring-indigo-500"
-            rows="3"
-            value={newAnnouncement.message}
-            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
-            required
-          ></textarea>
-          <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 transition">
-            Post Announcement
-          </button>
-        </form>
-      )}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: 'auto' }} 
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-8"
+          >
+            <form onSubmit={handleSubmit} className="card-corp !bg-gray-50 border-brand-primary/10">
+              <div className="space-y-4">
+                <div>
+                  <label className="label-corp">Broadcast Heading</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Q4 Roadmap Update"
+                    className="input-corp"
+                    value={newAnnouncement.title}
+                    onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label-corp">Communication Details</label>
+                  <textarea
+                    placeholder="Provide essential updates for the ecosystem..."
+                    className="input-corp resize-none"
+                    rows="3"
+                    value={newAnnouncement.message}
+                    onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
+                    required
+                  ></textarea>
+                </div>
+                <button type="submit" className="btn-primary w-full shadow-lg shadow-brand-primary/10">
+                  Deploy Broadcast
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loading ? (
-        <div className="text-gray-500">Loading...</div>
+        <div className="grid grid-cols-1 gap-4">
+           {[1, 2].map(i => <div key={i} className="h-24 bg-white border border-brand-border rounded-xl animate-pulse" />)}
+        </div>
       ) : announcements.length === 0 ? (
-        <p className="text-gray-500 italic">No announcements yet.</p>
+        <div className="p-10 text-center bg-white border border-dashed border-brand-border rounded-xl">
+           <p className="text-brand-secondary font-medium italic text-sm text-brand-muted/50">No active broadcasts in the current cycle.</p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {announcements.map((a) => (
-            <div key={a._id} className="bg-gray-900 p-4 rounded-lg border border-gray-800 flex justify-between items-start">
-              <div>
-                <h3 className="text-indigo-400 font-bold mb-1">{a.title}</h3>
-                <p className="text-gray-400 text-sm whitespace-pre-wrap">{a.message}</p>
-                <span className="text-[10px] text-gray-600 mt-2 block italic">
-                  {new Date(a.createdAt).toLocaleString()}
-                </span>
+            <motion.div 
+              key={a._id} 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card-corp !p-6 relative group border-brand-border hover:border-brand-primary/20"
+            >
+              <div className="flex justify-between items-start mb-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-brand-primary/10 rounded-lg flex items-center justify-center text-brand-primary">
+                       <Bell size={16} />
+                    </div>
+                    <h3 className="text-sm font-black text-brand-dark uppercase tracking-tight line-clamp-1">{a.title}</h3>
+                 </div>
+                {user?.role === 'admin' && (
+                  <button 
+                    onClick={() => handleDelete(a._id)} 
+                    className="p-2 text-brand-muted hover:text-brand-danger transition-colors bg-brand-danger/5 rounded-lg border border-transparent hover:border-brand-danger/20"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
-              {user?.role === 'admin' && (
-                <button onClick={() => handleDelete(a._id)} className="text-gray-600 hover:text-red-500 transition">
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
+              <p className="text-brand-muted text-xs leading-relaxed font-medium mb-6 whitespace-pre-wrap line-clamp-4 italic">
+                "{a.message}"
+              </p>
+              <div className="flex items-center gap-4 pt-4 border-t border-brand-border/60 text-[9px] font-black text-brand-secondary/40 uppercase tracking-[0.2em]">
+                 <span className="flex items-center gap-1.5"><Calendar size={10} className="text-brand-primary/40" /> {new Date(a.createdAt).toLocaleDateString()}</span>
+                 <span className="flex items-center gap-1.5"><Clock size={10} className="text-brand-primary/40" /> {new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </motion.div>
           ))}
         </div>
+
       )}
     </section>
   );

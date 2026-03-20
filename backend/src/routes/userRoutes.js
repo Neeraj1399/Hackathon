@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   getUsers, 
+  getJudges,
   updateUserRole, 
   deleteUser,
   getResetRequests,
@@ -15,6 +16,7 @@ router.use(protect);
 router.use(authorize('admin'));
 
 router.get('/', getUsers);
+router.get('/judges', getJudges);
 router.route('/:id').delete(deleteUser);
 router.put('/:id/role', updateUserRole);
 

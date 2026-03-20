@@ -9,6 +9,7 @@ const { generateToken, generateRefreshToken } = require('../utils/generateToken'
 // @access  Public
 exports.register = async (req, res) => {
   try {
+    const { name, email, password, role } = req.body;
     // Only allow participant or judge for public registration
     const finalRole = (role === 'admin') ? 'participant' : (role || 'participant');
 
@@ -41,6 +42,9 @@ exports.register = async (req, res) => {
       }
     });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, message: 'This email is already registered.' });
+    }
     res.status(400).json({ success: false, message: err.message });
   }
 };

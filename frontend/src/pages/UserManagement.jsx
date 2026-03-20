@@ -1,7 +1,23 @@
 import { useEffect, useState } from 'react';
 import API from '../api/axiosInstance';
-import Navbar from '../components/Navbar';
-import { Users, Trash2, ShieldCheck, AlertCircle, CheckCircle, ArrowRight, Key, XCircle, Clock } from 'lucide-react';
+import { 
+  Users, 
+  Trash2, 
+  ShieldCheck, 
+  AlertCircle, 
+  CheckCircle, 
+  ArrowRight, 
+  Key, 
+  XCircle, 
+  Clock,
+  Search,
+  Filter,
+  MoreVertical,
+  Mail,
+  Calendar,
+  ShieldAlert,
+  Plus
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -11,6 +27,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [search, setSearch] = useState('');
   
   // Modal State
   const [modal, setModal] = useState({ 
@@ -25,7 +42,7 @@ const UserManagement = () => {
       const res = await API.get('users');
       setUsers(res.data.data);
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to access registry' });
+      setMessage({ type: 'error', text: 'Cloud registry sync failed.' });
     } finally {
       setLoading(false);
     }
@@ -49,7 +66,7 @@ const UserManagement = () => {
 
   const handleRoleChangeRequest = (userId, userEmail, newRole) => {
     if (userEmail === 'adminhackathon@gmail.com') {
-      alert('Security Protocol: The root administrator cannot be modified.');
+      alert('Security override: System administrator privileges are immutable.');
       return;
     }
     setModal({ isOpen: true, userId, userEmail, newRole });
@@ -61,213 +78,227 @@ const UserManagement = () => {
 
     try {
       await API.put(`users/${userId}/role`, { role: newRole });
-      setMessage({ type: 'success', text: `Access level escalated for ${userEmail}` });
+      setMessage({ type: 'success', text: `Access permissions updated for ${userEmail}.` });
       fetchUsers();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Authorization rejected' });
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Permission escalation denied.' });
       fetchUsers();
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Delete user from organizational registry?')) return;
+    if (!window.confirm('Deprovision this user from the main directory?')) return;
     try {
       await API.delete(`users/${userId}`);
-      setMessage({ type: 'success', text: 'User purged from system' });
+      setMessage({ type: 'success', text: 'User deprovisioned successfully.' });
       fetchUsers();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Purge failed' });
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Deprovisioning failed.' });
     }
   };
 
   const handleApproveReset = async (requestId) => {
     try {
-      const res = await API.post(`users/reset-requests/${requestId}/approve`);
-      setMessage({ type: 'success', text: res.data.message });
+      await API.post(`users/reset-requests/${requestId}/approve`);
+      setMessage({ type: 'success', text: 'Authentication override authorized.' });
       fetchResetRequests();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Approval failed' });
+      setMessage({ type: 'error', text: 'Authorization protocol failed.' });
     }
   };
 
   const handleRejectReset = async (requestId) => {
     try {
       await API.post(`users/reset-requests/${requestId}/reject`);
-      setMessage({ type: 'success', text: 'Recovery request denied' });
+      setMessage({ type: 'success', text: 'Authentication override rejected.' });
       fetchResetRequests();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Rejection failed' });
+      setMessage({ type: 'error', text: 'Rejection protocol failed.' });
     }
   };
 
+
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(search.toLowerCase()) || 
+    u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
-      <div className="mesh-glow" />
-      <Navbar />
-      <main className="responsive-main" style={{ maxWidth: '1100px', margin: '0 auto', padding: '64px 40px' }}>
-        <header style={{ marginBottom: '60px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-             <div style={{ width: '40px', height: '40px', backgroundColor: '#A3FF12', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <Users style={{ width: '20px', height: '20px', color: 'black' }} />
-             </div>
-             <h1 className="responsive-heading" style={{ fontSize: '32px', fontWeight: 900, color: 'white', letterSpacing: '-0.03em' }}>Organizational Registry</h1>
+    <div className="min-h-full">
+      {/* Header */}
+      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 text-brand-primary font-black text-[10px] uppercase tracking-[0.2em] mb-3">
+            <div className="w-6 h-1 bg-brand-primary rounded-full" /> Management Registry
           </div>
-          <p style={{ color: '#666', fontWeight: 500, fontSize: '16px' }}>Manage access levels and monitor active users within the ecosystem.</p>
-        </header>
+          <h1 className="text-4xl font-black text-brand-dark tracking-tight">Identity Directory</h1>
+          <p className="text-brand-muted mt-2 font-medium max-w-xl">
+             Supervise corporate accounts, manage role-based access protocols, and ensure secure ecosystem participation.
+          </p>
+        </div>
+        
+      </header>
 
-        {message.text && (
-          <div style={{ padding: '16px 20px', borderRadius: '16px', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: 600, transition: 'all 0.3s', ...(message.type === 'success' ? { backgroundColor: 'rgba(163,255,18,0.1)', border: '1px solid rgba(163,255,18,0.2)', color: '#A3FF12' } : { backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444' }) }}>
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-            {message.text}
+      {message.text && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }} 
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-5 rounded-2xl mb-10 flex items-center gap-3 text-sm font-bold border ${
+            message.type === 'success' 
+            ? 'bg-brand-success/5 border-brand-success/20 text-brand-success' 
+            : 'bg-brand-danger/5 border-brand-danger/20 text-brand-danger'
+          } shadow-sm`}
+        >
+          {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          {message.text}
+        </motion.div>
+      )}
+
+      {/* Main Directory List */}
+      <div className="bg-white border border-brand-border rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-brand-section px-6 py-4 border-b border-brand-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-bold text-brand-text-primary uppercase tracking-wider">Identity Registry</h2>
+            <span className="px-2 py-0.5 bg-blue-50 text-brand-primary text-[10px] font-bold rounded border border-blue-100">
+               {filteredUsers.length} Entries
+            </span>
           </div>
-        )}
-
-        <div className="athiva-card" style={{ border: '1px solid #1F1F1F', overflowX: 'auto' }}>
-          {/* Header */}
-          <div className="modern-grid-header" style={{ gridTemplateColumns: 'minmax(250px, 1.5fr) 180px 180px 100px', minWidth: '700px' }}>
-            <div>Identity</div>
-            <div>Privileges</div>
-            <div>Registry Date</div>
-            <div style={{ textAlign: 'right' }}>Actions</div>
-          </div>
-
-          {/* Body */}
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: '700px' }}>
-            {loading ? (
-              <div style={{ padding: '80px', textAlign: 'center', color: '#444', fontWeight: 600 }}>Syncing registry data...</div>
-            ) : users.length === 0 ? (
-              <div style={{ padding: '80px', textAlign: 'center', color: '#444', fontWeight: 600 }}>Registry is currently vacant.</div>
-            ) : (
-              users.map((u) => (
-                <div key={u._id} className="modern-grid-row" style={{ gridTemplateColumns: 'minmax(250px, 1.5fr) 180px 180px 100px' }}>
-                  {/* Identity */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ width: '44px', height: '44px', backgroundColor: '#000', border: '1px solid #333', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#B3B3B3', fontSize: '14px' }}>
-                        {u.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 800, color: 'white' }}>{u.name} {u.email === 'adminhackathon@gmail.com' && <ShieldCheck size={14} style={{ display: 'inline', marginLeft: '6px', color: '#A3FF12' }} />}</div>
-                        <div style={{ fontSize: '12px', color: '#666', fontWeight: 500 }}>{u.email}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Privileges */}
-                  <div>
-                    <div style={{ position: 'relative', width: 'fit-content' }}>
-                      <select 
-                        disabled={u.email === 'adminhackathon@gmail.com'}
-                        value={u.role} 
-                        onChange={(e) => handleRoleChangeRequest(u._id, u.email, e.target.value)}
-                        className="athiva-input"
-                        style={{ padding: '8px 32px 8px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: u.email === 'adminhackathon@gmail.com' ? 'not-allowed' : 'pointer', backgroundColor: '#000', width: '100%', maxWidth: '140px' }}
-                      >
-                        <option value="participant">Participant</option>
-                        <option value="judge">Judge</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Date */}
-                  <div style={{ fontSize: '14px', color: '#666', fontWeight: 600 }}>
-                    <span className="mobile-only-label" style={{ display: 'none' }}>Registered: </span>
-                    {new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ textAlign: 'right' }}>
-                    <button 
-                      disabled={u.email === 'adminhackathon@gmail.com'}
-                      onClick={() => handleDeleteUser(u._id)}
-                      style={{ width: '40px', height: '40px', backgroundColor: u.email === 'adminhackathon@gmail.com' ? 'transparent' : 'rgba(239,68,68,0.05)', color: u.email === 'adminhackathon@gmail.com' ? '#141414' : '#EF4444', border: u.email === 'adminhackathon@gmail.com' ? 'none' : '1px solid rgba(239,68,68,0.1)', borderRadius: '12px', cursor: u.email === 'adminhackathon@gmail.com' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', float: 'right' }}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={14} />
+            <input 
+              type="text" 
+              placeholder="Search by identity or email..." 
+              className="w-full bg-white border border-brand-border rounded-md py-1.5 pl-9 pr-4 text-xs focus:border-brand-primary outline-none"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
         </div>
 
-        <section style={{ marginTop: '80px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-             <div style={{ width: '36px', height: '36px', backgroundColor: 'rgba(163,255,18,0.1)', border: '1px solid rgba(163,255,18,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <Key style={{ width: '18px', height: '18px', color: '#A3FF12' }} />
-             </div>
-             <h2 style={{ fontSize: '24px', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>Pending Recovery Approvals</h2>
-          </div>
-
-          <div className="athiva-card" style={{ border: '1px solid #1F1F1F', overflow: 'hidden' }}>
-            {/* Header */}
-            <div className="modern-grid-header" style={{ gridTemplateColumns: '1.5fr 1fr 120px 240px' }}>
-              <div>User Identity</div>
-              <div>Timestamp</div>
-              <div>Status</div>
-              <div style={{ textAlign: 'right' }}>Authorization</div>
-            </div>
-
-            {/* Body */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {requestsLoading ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#444', fontSize: '13px' }}>Syncing recovery queue...</div>
-              ) : resetRequests.filter(r => r.status === 'pending').length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#444', fontSize: '13px' }}>No pending recovery signals at this time.</div>
-              ) : (
-                resetRequests.filter(r => r.status === 'pending').map((r) => (
-                  <div key={r._id} className="modern-grid-row" style={{ gridTemplateColumns: '1.5fr 1fr 120px 240px' }}>
-                    {/* User Identity */}
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: 'white' }}>{r.user?.name}</div>
-                      <div style={{ fontSize: '11px', color: '#666', fontWeight: 500 }}>{r.user?.email}</div>
-                    </div>
-
-                    {/* Timestamp */}
-                    <div style={{ fontSize: '13px', color: '#666', fontWeight: 600 }}>
-                      {new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </div>
-
-                    {/* Status */}
-                    <div>
-                      <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '4px 10px', backgroundColor: 'rgba(163,255,18,0.05)', color: '#A3FF12', borderRadius: '8px', border: '1px solid rgba(163,255,18,0.1)' }}>
-                        {r.status}
-                      </span>
-                    </div>
-
-                    {/* Authorization Actions */}
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                        <button 
-                          onClick={() => handleRejectReset(r._id)}
-                          style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                          <XCircle size={14} /> Deny
-                        </button>
-                        <button 
-                          onClick={() => handleApproveReset(r._id)}
-                          style={{ padding: '8px 16px', backgroundColor: '#A3FF12', color: 'black', border: 'none', borderRadius: '10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                          <ShieldCheck size={14} /> Approve Access
-                        </button>
-                      </div>
-                    </div>
+        <div className="divide-y divide-brand-border">
+          {loading ? (
+             <div className="p-12 text-center text-sm text-brand-text-secondary animate-pulse">Synchronizing organizational data...</div>
+          ) : filteredUsers.length === 0 ? (
+             <div className="p-12 text-center text-sm text-brand-text-secondary italic">No matches found in the active directory.</div>
+          ) : (
+            filteredUsers.map((u) => (
+              <div key={u._id} className="list-row group !px-6 !py-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded bg-brand-section flex items-center justify-center text-brand-primary font-bold text-sm border border-brand-border">
+                    {u.name.charAt(0)}
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
+                  <div>
+                    <div className="flex items-center gap-2">
+                       <p className="text-sm font-bold text-brand-text-primary">{u.name}</p>
+                       {u.email === 'adminhackathon@gmail.com' && <ShieldCheck size={14} className="text-brand-success" />}
+                    </div>
+                    <p className="text-xs text-brand-text-secondary">{u.email}</p>
+                  </div>
+                </div>
 
-      </main>
+                <div className="flex items-center gap-8">
+                  <div className="hidden lg:block text-right">
+                    <p className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-tight">Access Authorization</p>
+                    <select 
+                      disabled={u.email === 'adminhackathon@gmail.com'}
+                      value={u.role} 
+                      onChange={(e) => handleRoleChangeRequest(u._id, u.email, e.target.value)}
+                      className="bg-transparent text-xs font-semibold text-brand-primary border-0 p-0 focus:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="participant">Participant</option>
+                      <option value="judge">Judge</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </div>
+                  
+                  <div className="hidden md:block w-32">
+                     <p className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-tight">Registry Date</p>
+                     <p className="text-xs font-medium text-brand-text-primary mt-0.5">
+                        {new Date(u.createdAt).toLocaleDateString()}
+                     </p>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button className="p-2 text-brand-text-secondary hover:text-brand-primary transition-colors hover:bg-brand-bg rounded-md">
+                      <Search size={14} />
+                    </button>
+                    <button 
+                      disabled={u.email === 'adminhackathon@gmail.com'}
+                      onClick={() => handleDeleteUser(u._id)}
+                      className="p-2 text-brand-text-secondary hover:text-brand-danger transition-colors hover:bg-red-50 rounded-md disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Deactivate Account"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Security Overrides Section */}
+      <section className="mt-12">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-red-50 text-brand-danger rounded-lg flex items-center justify-center border border-red-100">
+            <ShieldAlert size={20} />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-brand-text-primary">Security Override Queue</h2>
+            <p className="text-xs text-brand-text-secondary">Action required for identity recovery protocols.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {requestsLoading ? (
+             <div className="col-span-full h-32 bg-white border border-brand-border rounded-lg animate-pulse" />
+          ) : resetRequests.filter(r => r.status === 'pending').length === 0 ? (
+             <div className="col-span-full p-8 text-center bg-white border border-brand-border rounded-lg border-dashed">
+                <p className="text-sm text-brand-text-secondary">No pending authentication overrides in the queue.</p>
+             </div>
+          ) : (
+            resetRequests.filter(r => r.status === 'pending').map((r) => (
+              <div key={r._id} className="card-enterprise !p-5 border-l-4 border-l-brand-warning">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="text-sm font-bold text-brand-text-primary">{r.userId?.name}</p>
+                    <p className="text-xs text-brand-text-secondary mt-0.5">{r.userId?.email}</p>
+                  </div>
+                  <span className="badge-enterprise badge-warning">Pending</span>
+                </div>
+                
+                <div className="flex items-center gap-2 mb-4 text-[11px] font-medium text-brand-text-secondary">
+                  <Clock size={12} />
+                  Requested {new Date(r.createdAt).toLocaleString()}
+                </div>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleApproveReset(r._id)}
+                    className="flex-1 btn-primary !bg-brand-warning hover:!bg-yellow-600"
+                  >
+                    Authorize
+                  </button>
+                  <button 
+                    onClick={() => handleRejectReset(r._id)}
+                    className="btn-secondary text-brand-danger hover:text-brand-danger"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
 
       <ConfirmationModal 
         isOpen={modal.isOpen}
         onClose={() => { setModal({ ...modal, isOpen: false }); fetchUsers(); }}
         onConfirm={confirmRoleChange}
-        title="Escalate Privileges?"
-        message={`Confirming access level transition for ${modal.userEmail} to ${modal.newRole.toUpperCase()}. This action will grant specialized organizational permissions.`}
+        title="Escalate Privilege Logic"
+        message={`Confirming identity translation for ${modal.userEmail}. Escalating access level to system-wide "${modal.newRole.toUpperCase()}" privileges.`}
       />
     </div>
   );

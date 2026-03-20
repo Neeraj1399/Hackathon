@@ -5,15 +5,18 @@ const {
   createHackathon,
   updateHackathon,
   deleteHackathon,
-  requestToJudge,
-  getJudgeRequests,
-  approveJudgeRequest,
-  getJoinedHackathons
+  inviteJudge,
+  getJoinedHackathons,
+  getGlobalStats,
+  getJudgeStats
 } = require('../controllers/hackathonController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+router.get('/stats/overview', protect, authorize('admin'), getGlobalStats);
+router.get('/stats/judge', protect, authorize('judge'), getJudgeStats);
 
 router.get('/judging/me', protect, authorize('judge'), getJoinedHackathons);
 
@@ -28,12 +31,6 @@ router
   .put(protect, authorize('admin'), updateHackathon)
   .delete(protect, authorize('admin'), deleteHackathon);
 
-router.post('/:id/judge-request', protect, authorize('judge'), requestToJudge);
-
-router
-  .route('/:id/judge-requests')
-  .get(protect, authorize('admin'), getJudgeRequests);
-
-router.put('/:id/judge-requests/:requestId', protect, authorize('admin'), approveJudgeRequest);
+router.post('/:id/invite-judge', protect, authorize('admin'), inviteJudge);
 
 module.exports = router;

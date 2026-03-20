@@ -1,3 +1,4 @@
+// c:\Athiva\Hackathon\backend\src\utils\emailService.js
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
@@ -8,77 +9,82 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const BRAND_PRIMARY = '#2563EB';
+const BRAND_BG = '#F8FAFC';
+const BRAND_DARK = '#0F172A';
+const BRAND_SECONDARY = '#64748B';
+const BRAND_BORDER = '#E5E7EB';
+
+const getBaseTemplate = (content, title, accentColor = BRAND_PRIMARY) => `
+  <div style="font-family:'Inter','Segoe UI',Tahoma,Geneva,Verdana,sans-serif; max-width:600px; margin:0 auto; background-color:${BRAND_BG}; padding:40px 20px;">
+    <div style="background-color:#ffffff; border:1px solid ${BRAND_BORDER}; border-radius:24px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+      <div style="padding:40px 40px 0; text-align:center;">
+        <div style="display:inline-block; background-color:${accentColor}; width:56px; height:56px; border-radius:16px; line-height:56px; font-size:24px; font-weight:900; color:#ffffff; margin-bottom:24px; box-shadow:0 10px 15px -3px rgba(37,99,235,0.2);">A</div>
+        <h1 style="color:${BRAND_DARK}; font-size:24px; font-weight:800; margin:0 0 12px; tracking-tight:-0.02em;">${title}</h1>
+      </div>
+      <div style="padding:0 40px 40px;">
+        ${content}
+      </div>
+      <div style="background-color:#F1F5F9; padding:24px 40px; text-align:center; border-top:1px solid ${BRAND_BORDER};">
+        <p style="color:${BRAND_SECONDARY}; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; margin:0;">Athiva Corporate Innovation Hub &bull; Confidential Protocol</p>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:24px;">
+       <p style="color:${BRAND_SECONDARY}; font-size:12px;">&copy; 2026 Athiva Technology and Management Services. All rights reserved.</p>
+    </div>
+  </div>
+`;
+
 /**
  * Send a password reset email with a clickable link.
- * @param {string} toEmail - Recipient email
- * @param {string} resetToken - Unhashed reset token
  */
 const sendResetEmail = async (toEmail, resetToken) => {
   const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:14px; line-height:1.6; text-align:center; margin-bottom:32px;">
+      An administrative override has been authorized for your corporate account. Use the secure channel below to synchronize your new security key.
+    </p>
+    <div style="text-align:center; margin-bottom:32px;">
+      <a href="${resetUrl}" style="display:inline-block; background-color:${BRAND_PRIMARY}; color:#ffffff; font-weight:700; padding:16px 40px; border-radius:14px; text-decoration:none; font-size:14px; box-shadow:0 4px 6px rgba(37,99,235,0.2);">Reset Identity Key</a>
+    </div>
+    <p style="color:${BRAND_SECONDARY}; font-size:12px; text-align:center; margin:0;">
+      This secondary authentication link will expire in <strong style="color:${BRAND_DARK};">10 minutes</strong> for security compliance.
+    </p>
+  `;
+
   const mailOptions = {
-    from: `"Athiva Hack" <${process.env.SMTP_USER}>`,
+    from: `"Athiva Security" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: 'Password Reset – Athiva Hack',
-    html: `
-      <div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;">
-        <div style="padding:32px 32px 0;text-align:center;">
-          <div style="display:inline-block;background:#A3FF12;width:48px;height:48px;border-radius:12px;line-height:48px;font-size:22px;font-weight:900;color:#000;margin-bottom:16px;">A</div>
-          <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;">Password Reset Approved</h1>
-          <p style="color:#888;font-size:14px;margin:0;">An administrator has approved your recovery request.</p>
-        </div>
-        <div style="padding:24px 32px 32px;">
-          <p style="color:#aaa;font-size:13px;line-height:1.6;">Click the button below to set a new password. This link expires in <strong style="color:#A3FF12;">10 minutes</strong>.</p>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="${resetUrl}" style="display:inline-block;background:#A3FF12;color:#000;font-weight:800;padding:14px 36px;border-radius:999px;text-decoration:none;font-size:14px;">Reset Password</a>
-          </div>
-          <p style="color:#555;font-size:11px;text-align:center;">If the button doesn't work, copy this URL:<br/><a href="${resetUrl}" style="color:#A3FF12;word-break:break-all;">${resetUrl}</a></p>
-        </div>
-        <div style="background:#050505;padding:16px 32px;text-align:center;border-top:1px solid #1f1f1f;">
-          <p style="color:#444;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Athiva Hack &bull; Secure Access Recovery</p>
-        </div>
-      </div>
-    `
+    subject: 'Identity Restoration Protocol – Athiva',
+    html: getBaseTemplate(content, 'Authentication Recalibration')
   };
 
   await transporter.sendMail(mailOptions);
-  console.log(`Reset email sent to ${toEmail}`);
 };
 
 /**
- * Send an email to the judge when their request is accepted or rejected.
+ * Send an email to the judge when they are invited to an event.
  */
-const sendJudgeStatusEmail = async (toEmail, hackathonTitle, status) => {
-  const isApproved = status === 'approved';
+const sendJudgeInviteEmail = async (toEmail, hackathonTitle) => {
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:15px; line-height:1.7; text-align:center; margin-bottom:32px;">
+      You have been formally invited to the <strong style="color:${BRAND_DARK}; text-decoration:underline; decoration-color:${BRAND_PRIMARY}20;">Evaluation Committee</strong> for the upcoming <strong>${hackathonTitle}</strong> innovation cycle.
+    </p>
+    <div style="background-color:${BRAND_BG}; border:1px solid ${BRAND_BORDER}; border-radius:16px; padding:20px; margin-bottom:32px; text-align:center;">
+       <div style="color:${BRAND_SECONDARY}; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Assigned Track</div>
+       <div style="color:${BRAND_DARK}; font-size:18px; font-weight:800;">${hackathonTitle}</div>
+    </div>
+    <div style="text-align:center;">
+      <a href="http://localhost:5173/dashboard" style="display:inline-block; background-color:${BRAND_PRIMARY}; color:#ffffff; font-weight:700; padding:16px 40px; border-radius:14px; text-decoration:none; font-size:14px;">Access Committee Dashboard</a>
+    </div>
+  `;
+
   const mailOptions = {
-    from: `"Athiva Hack" <${process.env.SMTP_USER}>`,
+    from: `"Athiva Registry" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: `Judge Request ${status === 'approved' ? 'Approved' : 'Update'} – ${hackathonTitle}`,
-    html: `
-      <div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;">
-        <div style="padding:32px;text-align:center;">
-          <div style="display:inline-block;background:${isApproved ? '#A3FF12' : '#EF4444'};width:48px;height:48px;border-radius:12px;line-height:48px;font-size:22px;font-weight:900;color:#000;margin-bottom:16px;">${isApproved ? '✓' : '!'}</div>
-          <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;">Request ${isApproved ? 'Approved' : 'Rejected'}</h1>
-          <p style="color:#888;font-size:14px;">Event: <strong style="color:#fff">${hackathonTitle}</strong></p>
-        </div>
-        <div style="padding:0 32px 32px;">
-          <p style="color:#aaa;font-size:14px;line-height:1.6;text-align:center;">
-            ${isApproved 
-              ? `Congratulations! You have been selected as a judge for the <strong>${hackathonTitle}</strong>. You can now access the evaluation dashboard.`
-              : `Thank you for your interest in judging <strong>${hackathonTitle}</strong>. Unfortunately, we cannot accommodate your request at this time.`
-            }
-          </p>
-          ${isApproved ? `
-          <div style="text-align:center;margin:24px 0;">
-            <a href="http://localhost:5173/dashboard" style="display:inline-block;background:#A3FF12;color:#000;font-weight:800;padding:14px 36px;border-radius:999px;text-decoration:none;font-size:14px;">Go to Dashboard</a>
-          </div>
-          ` : ''}
-        </div>
-        <div style="background:#050505;padding:16px 32px;text-align:center;border-top:1px solid #1f1f1f;">
-          <p style="color:#444;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Athiva Hack &bull; Internal Hackathon Platform</p>
-        </div>
-      </div>
-    `
+    subject: `Panel Appointment Notice – ${hackathonTitle}`,
+    html: getBaseTemplate(content, 'Operational Engagement Invite')
   };
   await transporter.sendMail(mailOptions);
 };
@@ -87,28 +93,20 @@ const sendJudgeStatusEmail = async (toEmail, hackathonTitle, status) => {
  * Send an email to participants when the event starts.
  */
 const sendHackathonStartEmail = async (toEmail, hackathonTitle) => {
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:15px; line-height:1.7; text-align:center; margin-bottom:32px;">
+      Innovation protocols for <strong>${hackathonTitle}</strong> have been officially activated. The submission registry is now accepting project transmissions.
+    </p>
+    <div style="text-align:center;">
+      <a href="http://localhost:5173/dashboard" style="display:inline-block; background-color:${BRAND_PRIMARY}; color:#ffffff; font-weight:700; padding:16px 40px; border-radius:14px; text-decoration:none; font-size:14px;">Initiate Project Build</a>
+    </div>
+  `;
+
   const mailOptions = {
-    from: `"Athiva Hack" <${process.env.SMTP_USER}>`,
+    from: `"Athiva Pulse" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: `🚀 The Event has Started: ${hackathonTitle}`,
-    html: `
-      <div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;">
-        <div style="padding:32px;text-align:center;">
-          <div style="font-size:40px;margin-bottom:16px;">🚀</div>
-          <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;">It's Go Time!</h1>
-          <p style="color:#888;font-size:14px;">Hackathon: <strong style="color:#A3FF12">${hackathonTitle}</strong> is now live.</p>
-        </div>
-        <div style="padding:0 32px 32px;">
-          <p style="color:#aaa;font-size:14px;line-height:1.6;text-align:center;">The submission portal is now open. Put your skills to the test and build something amazing. Good luck!</p>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="http://localhost:5173/dashboard" style="display:inline-block;background:#A3FF12;color:#000;font-weight:800;padding:14px 36px;border-radius:999px;text-decoration:none;font-size:14px;">Participate Now</a>
-          </div>
-        </div>
-        <div style="background:#050505;padding:16px 32px;text-align:center;border-top:1px solid #1f1f1f;">
-          <p style="color:#444;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Athiva Hack &bull; Innovation Starts Here</p>
-        </div>
-      </div>
-    `
+    subject: `Protocol Activated: ${hackathonTitle} is Live`,
+    html: getBaseTemplate(content, 'Event Cycle Commencement')
   };
   await transporter.sendMail(mailOptions);
 };
@@ -117,28 +115,20 @@ const sendHackathonStartEmail = async (toEmail, hackathonTitle) => {
  * Send an email alert for upcoming submission deadlines.
  */
 const sendDeadlineAlertEmail = async (toEmail, hackathonTitle, hoursRemaining) => {
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:15px; line-height:1.7; text-align:center; margin-bottom:32px;">
+      Attention: The submission window for <strong>${hackathonTitle}</strong> is reaching sunset. Final project commits must be synchronized within the next <strong style="color:#EF4444;">${hoursRemaining} hours</strong>.
+    </p>
+    <div style="text-align:center;">
+      <a href="http://localhost:5173/dashboard" style="display:inline-block; background-color:#EF4444; color:#ffffff; font-weight:700; padding:16px 40px; border-radius:14px; text-decoration:none; font-size:14px;">Synchronize Final Commit</a>
+    </div>
+  `;
+
   const mailOptions = {
-    from: `"Athiva Hack" <${process.env.SMTP_USER}>`,
+    from: `"Athiva Vigil" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: `⏰ Deadline Alert: ${hoursRemaining} Hours Left for ${hackathonTitle}`,
-    html: `
-      <div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;">
-        <div style="padding:32px;text-align:center;">
-          <div style="display:inline-block;background:#FFB800;width:48px;height:48px;border-radius:12px;line-height:48px;font-size:22px;color:#000;margin-bottom:16px;">⏰</div>
-          <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;">Hurry Up!</h1>
-          <p style="color:#888;font-size:14px;">The <strong>${hackathonTitle}</strong> deadline is approaching.</p>
-        </div>
-        <div style="padding:0 32px 32px;">
-          <p style="color:#aaa;font-size:14px;line-height:1.6;text-align:center;">Only <strong style="color:#FFB800;">${hoursRemaining} hours</strong> remain until the submission portal closes. Make sure to submit your project on time!</p>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="http://localhost:5173/dashboard" style="display:inline-block;background:#FFB800;color:#000;font-weight:800;padding:14px 36px;border-radius:999px;text-decoration:none;font-size:14px;">Submit Now</a>
-          </div>
-        </div>
-        <div style="background:#050505;padding:16px 32px;text-align:center;border-top:1px solid #1f1f1f;">
-          <p style="color:#444;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Athiva Hack &bull; Don't Miss Out</p>
-        </div>
-      </div>
-    `
+    subject: `URGENT: ${hoursRemaining} Hours to Protocol Sunset`,
+    html: getBaseTemplate(content, 'Submission Window Warning', '#EF4444')
   };
   await transporter.sendMail(mailOptions);
 };
@@ -147,64 +137,53 @@ const sendDeadlineAlertEmail = async (toEmail, hackathonTitle, hoursRemaining) =
  * Send an email to the winners of the hackathon.
  */
 const sendWinnerEmail = async (toEmail, hackathonTitle, rank) => {
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:15px; line-height:1.7; text-align:center; margin-bottom:32px;">
+      Excellence recognized. Your submission for <strong>${hackathonTitle}</strong> has secured a distinguished position in the global rankings.
+    </p>
+    <div style="background-color:#F0FDF4; border:1px solid #BBF7D0; border-radius:16px; padding:24px; margin-bottom:32px; text-align:center;">
+       <div style="color:#16A34A; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Official Standing</div>
+       <div style="color:#166534; font-size:32px; font-weight:900;">Rank #${rank}</div>
+    </div>
+    <div style="text-align:center;">
+      <a href="http://localhost:5173/dashboard" style="display:inline-block; background-color:#10B981; color:#ffffff; font-weight:700; padding:16px 40px; border-radius:14px; text-decoration:none; font-size:14px;">View Official Results</a>
+    </div>
+  `;
+
   const mailOptions = {
-    from: `"Athiva Hack" <${process.env.SMTP_USER}>`,
+    from: `"Athiva Excellence" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: `🏆 Congratulations! You Ranked #${rank} in ${hackathonTitle}`,
-    html: `
-      <div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;">
-        <div style="padding:32px;text-align:center;">
-          <div style="font-size:40px;margin-bottom:16px;">🏆</div>
-          <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;">A Great Achievement!</h1>
-          <p style="color:#888;font-size:14px;">You secured <strong style="color:#A3FF12">Rank #${rank}</strong> in the <strong>${hackathonTitle}</strong>.</p>
-        </div>
-        <div style="padding:0 32px 32px;">
-          <p style="color:#aaa;font-size:14px;line-height:1.6;text-align:center;">Your hard work and innovation have paid off. Check the final leaderboard to see the full results.</p>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="http://localhost:5173/dashboard" style="display:inline-block;background:#A3FF12;color:#000;font-weight:800;padding:14px 36px;border-radius:999px;text-decoration:none;font-size:14px;">View Results</a>
-          </div>
-        </div>
-        <div style="background:#050505;padding:16px 32px;text-align:center;border-top:1px solid #1f1f1f;">
-          <p style="color:#444;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Athiva Hack &bull; Champion's Circle</p>
-        </div>
-      </div>
-    `
+    subject: `Achievement Unlocked: Rank #${rank} Verified`,
+    html: getBaseTemplate(content, 'Innovation Excellence Award', '#10B981')
   };
   await transporter.sendMail(mailOptions);
 };
 
 /**
- * Send a thank you email to all participants and judges after the event.
+ * Send a thank you email after the event.
  */
 const sendThankYouEmail = async (toEmail, hackathonTitle, role) => {
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:15px; line-height:1.7; text-align:center; margin-bottom:32px;">
+      The <strong>${hackathonTitle}</strong> cycle has concluded. On behalf of the administration, we appreciate your engagement as a <strong>${role}</strong>.
+    </p>
+    <p style="color:${BRAND_SECONDARY}; font-size:13px; text-align:center;">
+      Your contribution strengthens the corporate innovation index. We look forward to your participation in the next module.
+    </p>
+  `;
+
   const mailOptions = {
-    from: `"Athiva Hack" <${process.env.SMTP_USER}>`,
+    from: `"Athiva Registry" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: `Thank You for a Great Event – ${hackathonTitle}`,
-    html: `
-      <div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:0 auto;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;">
-        <div style="padding:32px;text-align:center;">
-          <div style="font-size:32px;margin-bottom:16px;">✨</div>
-          <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px;">Thank You!</h1>
-          <p style="color:#888;font-size:14px;">The <strong>${hackathonTitle}</strong> has officially concluded.</p>
-        </div>
-        <div style="padding:0 32px 32px;">
-          <p style="color:#aaa;font-size:14px;line-height:1.6;text-align:center;">
-            Thank you for participating as a <strong>${role}</strong>. Your contribution made this event a success. We hope to see you in the next one!
-          </p>
-        </div>
-        <div style="background:#050505;padding:16px 32px;text-align:center;border-top:1px solid #1f1f1f;">
-          <p style="color:#444;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0;">Athiva Hack &bull; See You Next Time</p>
-        </div>
-      </div>
-    `
+    subject: `Cycle Conclusion: ${hackathonTitle}`,
+    html: getBaseTemplate(content, 'Engagement Appreciation')
   };
   await transporter.sendMail(mailOptions);
 };
 
 module.exports = { 
   sendResetEmail, 
-  sendJudgeStatusEmail, 
+  sendJudgeInviteEmail, 
   sendHackathonStartEmail, 
   sendDeadlineAlertEmail, 
   sendWinnerEmail, 

@@ -1,15 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/axiosInstance';
-import Navbar from '../components/Navbar';
-import { Clock, CheckCircle, AlertCircle, ArrowLeft, Github, Globe, Zap, Trophy, ShieldCheck } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  ArrowLeft, 
+  Github, 
+  Globe, 
+  Info, 
+  Trophy,
+  Mail,
+  Search,
+  ExternalLink,
+  Zap,
+  Layout,
+  Users,
+  ClipboardCheck
+} from 'lucide-react';
 
 const SubmitProject = () => {
   const { hackathonId } = useParams();
   const navigate = useNavigate();
   const [hackathon, setHackathon] = useState(null);
-  const [formData, setFormData] = useState({ projectTitle: '', description: '', githubLink: '', demoLink: '' });
+  const [formData, setFormData] = useState({ 
+    projectTitle: '', 
+    description: '', 
+    techStack: '',
+    githubLink: '', 
+    demoLink: '' 
+  });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -24,17 +44,19 @@ const SubmitProject = () => {
         const interval = setInterval(() => {
           const now = Date.now();
           const distance = deadline - now;
-          if (distance < 0) { clearInterval(interval); setTimeLeft('EXPIRED'); }
-          else {
+          if (distance < 0) { 
+            clearInterval(interval); 
+            setTimeLeft('EXPIRED'); 
+          } else {
             const d = Math.floor(distance / 86400000);
             const h = Math.floor((distance % 86400000) / 3600000);
             const m = Math.floor((distance % 3600000) / 60000);
-            setTimeLeft(`${d}d ${h}h ${m}m`);
+            setTimeLeft(`${d}d ${h}h ${m}m remaining`);
           }
         }, 1000);
         return () => clearInterval(interval);
       } catch (err) {
-        setMessage({ type: 'error', text: 'Connection to track registry lost' });
+        setMessage({ type: 'error', text: 'Registry connection disrupted.' });
       } finally { setLoading(false); }
     };
     fetchHackathon();
@@ -46,107 +68,166 @@ const SubmitProject = () => {
     setMessage({ type: '', text: '' });
     try {
       await API.post('submissions', { ...formData, hackathonId });
-      setMessage({ type: 'success', text: 'Transmission successful. Project recorded.' });
-      setTimeout(() => navigate('/dashboard'), 2000);
+      setMessage({ type: 'success', text: 'Project successfully submitted.' });
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Transmission failed' });
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Submission failed.' });
     } finally { setSubmitting(false); }
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '40px', height: '40px', border: '3px solid #1A1A1A', borderTopColor: '#A3FF12', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+    <div className="flex flex-col items-center justify-center min-h-[400px]">
+      <div className="w-8 h-8 border-4 border-brand-primary/10 border-t-brand-primary rounded-full animate-spin mb-4" />
+      <p className="text-sm font-medium text-brand-text-secondary">Connecting to submission portal...</p>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', position: 'relative' }}>
-      <div className="mesh-glow" />
-      <Navbar />
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 40px' }}>
-        <button onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '32px', padding: 0 }}>
-          <ArrowLeft size={16} /> Back to track
+    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+      <header>
+        <button 
+          onClick={() => navigate(-1)} 
+          className="flex items-center gap-2 text-xs font-bold text-brand-text-secondary hover:text-brand-primary uppercase tracking-widest mb-6 transition-colors"
+        >
+          <ArrowLeft size={14} /> Back to Dashboard
         </button>
+        <h1 className="text-xl font-bold text-brand-text-primary">Project Submission</h1>
+        <p className="text-sm text-brand-text-secondary mt-1">Submit your solution for the {hackathon?.title} event.</p>
+      </header>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '48px', alignItems: 'start' }}>
-          {/* Sidebar Info */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="athiva-card" style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ width: '48px', height: '48px', backgroundColor: '#A3FF12', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trophy size={24} color="black" />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '12px', color: 'white', letterSpacing: '-0.03em' }}>{hackathon?.title}</h2>
-                <p style={{ color: '#666', fontSize: '15px', lineHeight: 1.6, fontWeight: 500, marginBottom: '24px' }}>{hackathon?.description}</p>
-                
-                <p style={{ color: '#666', fontWeight: 500, fontSize: '16px' }}>Complete your entry for this track within the Athiva ecosystem.</p>
-                <div style={{ paddingTop: '24px', borderTop: '1px solid #1A1A1A' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Zap size={16} color="#A3FF12" />
-                    <span style={{ fontSize: '13px', fontWeight: 800, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operating Rules</span>
-                  </div>
-                  <div style={{ color: '#B3B3B3', fontSize: '14px', lineHeight: 1.6, backgroundColor: '#000', padding: '16px', borderRadius: '12px', border: '1px solid #141414', whiteSpace: 'pre-wrap' }}>
-                    {hackathon?.rules}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <div className="athiva-card" style={{ padding: '32px', backgroundColor: 'rgba(163,255,18,0.05)', borderColor: 'rgba(163,255,18,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <Clock size={20} color="#A3FF12" />
-                <span style={{ fontSize: '14px', fontWeight: 800, color: '#A3FF12', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Submission Window</span>
-              </div>
-              <div style={{ fontSize: '40px', fontWeight: 900, color: 'white', letterSpacing: '-0.05em', marginBottom: '8px' }}>{timeLeft}</div>
-              <p style={{ fontSize: '12px', fontWeight: 600, color: '#444' }}>Closing: {new Date(hackathon?.submissionDeadline).toLocaleString()}</p>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Track Info */}
+        <div className="space-y-6">
+          <div className="card-enterprise !p-5 bg-blue-50/30 border-blue-100">
+             <div className="flex items-center gap-2 text-brand-primary font-bold text-xs uppercase tracking-wider mb-3">
+                <Clock size={14} /> Deadline Info
+             </div>
+             <p className="text-xl font-black text-brand-text-primary">{timeLeft}</p>
+             <p className="text-[11px] text-brand-text-secondary mt-1">
+                Closes: {new Date(hackathon?.submissionDeadline).toLocaleString()}
+             </p>
           </div>
 
-          {/* Submission Form */}
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="athiva-card" style={{ padding: '48px', backgroundColor: 'rgba(15,15,15,0.8)', backdropFilter: 'blur(10px)' }}>
-            <h2 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '40px', color: 'white', letterSpacing: '-0.03em' }}>Project Transmission</h2>
+          <div className="card-enterprise !p-5">
+             <h3 className="text-xs font-bold text-brand-text-primary uppercase tracking-wider mb-3">Hackathon Objective</h3>
+             <p className="text-xs text-brand-text-secondary leading-relaxed line-clamp-4">
+                {hackathon?.description}
+             </p>
+          </div>
 
+          <div className="flex items-start gap-3 p-4 bg-brand-section rounded-lg border border-brand-border">
+             <Info size={16} className="text-brand-primary mt-0.5 shrink-0" />
+             <p className="text-[11px] text-brand-text-secondary leading-relaxed">
+                Ensure project repository is public or properly shared with the review board.
+             </p>
+          </div>
+        </div>
+
+        {/* Submission Form */}
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSubmit} className="bg-white border border-brand-border rounded-lg p-8 shadow-sm space-y-6">
             {message.text && (
-              <div style={{ padding: '16px 20px', borderRadius: '16px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: 700, ...(message.type === 'success' ? { backgroundColor: 'rgba(163,255,18,0.1)', border: '1px solid rgba(163,255,18,0.2)', color: '#A3FF12' } : { backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444' }) }}>
-                {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+              <div className={`p-4 rounded-md flex items-center gap-2 text-sm font-medium ${
+                message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-brand-danger border border-red-100'
+              }`}>
+                {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
                 {message.text}
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Project Title</label>
-                <input type="text" required className="athiva-input" placeholder="e.g. Neural Nexus Architecture" value={formData.projectTitle} onChange={(e) => setFormData({ ...formData, projectTitle: e.target.value })} />
+            {/* Project Concept (Idea Phase) */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-widest border-l-2 border-brand-primary pl-3">
+                Project Concept
+              </h3>
+              
+              <div className="form-group">
+                <label className="label-enterprise">Project Title</label>
+                <input 
+                  type="text" 
+                  required 
+                  className="input-enterprise" 
+                  placeholder="e.g. Nexus Framework" 
+                  value={formData.projectTitle} 
+                  onChange={(e) => setFormData({ ...formData, projectTitle: e.target.value })} 
+                />
               </div>
 
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>GitHub Link</label>
-                <div style={{ position: 'relative' }}>
-                  <Github style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                  <input type="url" required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="https://github.com/..." value={formData.githubLink} onChange={(e) => setFormData({ ...formData, githubLink: e.target.value })} />
+              <div className="form-group">
+                <label className="label-enterprise">Description & Objective</label>
+                <textarea 
+                  required 
+                  rows={4}
+                  className="input-enterprise resize-none" 
+                  placeholder="What problem does this solve and what is the core value proposition?" 
+                  value={formData.description} 
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label-enterprise">Tech Stack</label>
+                <input 
+                  type="text" 
+                  required 
+                  className="input-enterprise" 
+                  placeholder="e.g. React, Node.js, MongoDB, Tailwind CSS" 
+                  value={formData.techStack} 
+                  onChange={(e) => setFormData({ ...formData, techStack: e.target.value })} 
+                />
+              </div>
+            </div>
+
+            {/* Final Deliverables (Final Phase) */}
+            <div className="space-y-6 pt-6 border-t border-brand-border">
+              <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-widest border-l-2 border-brand-primary pl-3">
+                Final Deliverables
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="form-group">
+                  <label className="label-enterprise">GitHub Repository URL</label>
+                  <div className="relative">
+                    <Github className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={14} />
+                    <input 
+                      type="url" 
+                      required 
+                      className="input-enterprise pl-9" 
+                      placeholder="https://github.com/..." 
+                      value={formData.githubLink} 
+                      onChange={(e) => setFormData({ ...formData, githubLink: e.target.value })} 
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="label-enterprise">Demo URL (Optional)</label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={14} />
+                    <input 
+                      type="url" 
+                      className="input-enterprise pl-9" 
+                      placeholder="https://..." 
+                      value={formData.demoLink} 
+                      onChange={(e) => setFormData({ ...formData, demoLink: e.target.value })} 
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Demo URL (Optional)</label>
-                <div style={{ position: 'relative' }}>
-                  <Globe style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-                  <input type="url" className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="https://demo.vercel.app/..." value={formData.demoLink} onChange={(e) => setFormData({ ...formData, demoLink: e.target.value })} />
-                </div>
-              </div>
 
-              <div style={{ marginBottom: '40px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Project Description</label>
-                <textarea required className="athiva-input" style={{ minHeight: '120px', resize: 'vertical' }} placeholder="How does this solution address the challenge?" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-              </div>
-
-              <button type="submit" disabled={submitting || timeLeft === 'EXPIRED'} className="athiva-button" style={{ width: '100%', padding: '16px', justifyContent: 'center' }}>
-                {submitting ? 'Transmitting...' : timeLeft === 'EXPIRED' ? 'Window Closed' : 'Transmit Solution'} <ShieldCheck size={20} />
+            <div className="pt-4">
+              <button 
+                type="submit" 
+                disabled={submitting || timeLeft.includes('EXPIRED')} 
+                className="w-full btn-primary !py-3 flex justify-center items-center gap-2 font-bold uppercase tracking-widest text-xs"
+              >
+                {submitting ? 'Transmitting...' : timeLeft.includes('EXPIRED') ? 'Submission Window Closed' : 'Submit Project'}
               </button>
-            </form>
-          </motion.div>
+            </div>
+          </form>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

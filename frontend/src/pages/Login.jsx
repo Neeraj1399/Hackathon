@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -24,64 +23,86 @@ const Login = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-      <div className="mesh-glow" />
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }} 
-        animate={{ opacity: 1, scale: 1 }} 
-        className="athiva-card responsive-card-padding w-full max-w-md" 
-        style={{ padding: '48px', position: 'relative', zIndex: 10, backgroundColor: 'rgba(15,15,15,0.8)', backdropFilter: 'blur(10px)' }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ width: '56px', height: '56px', backgroundColor: '#A3FF12', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', transform: 'rotate(-10deg)', boxShadow: '0 0 30px rgba(163,255,18,0.3)' }}>
-            <div style={{ width: '28px', height: '28px', border: '4px solid black', borderRightColor: 'transparent', borderRadius: '50%', transform: 'rotate(45deg)' }} />
+    <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 bg-brand-primary text-white rounded-lg flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-brand-primary/20">
+            A
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.04em', color: 'white', marginBottom: '12px' }}>Take Control.</h1>
-          <p style={{ color: '#666', fontWeight: 500 }}>Athiva Identity Gateway</p>
+          <h1 className="text-2xl font-bold text-brand-text-primary">Welcome Back</h1>
+          <p className="text-sm text-brand-text-secondary font-medium">Access your hackathon dashboard</p>
         </div>
 
-        {error && (
-          <div style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', fontSize: '13px', fontWeight: 600 }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Work Email</label>
-            <div style={{ position: 'relative' }}>
-              <Mail style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-              <input type="email" required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <div className="bg-white border border-brand-border rounded-lg p-8 shadow-sm">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-md text-brand-danger text-xs font-medium mb-6 flex items-center gap-2">
+              <AlertCircle size={14} /> {error}
             </div>
-          </div>
+          )}
 
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#B3B3B3', marginLeft: '4px' }}>Password</label>
-              <Link to="/forgot-password" style={{ fontSize: '12px', fontWeight: 700, color: '#A3FF12', textDecoration: 'none' }}>Forgot?</Link>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="form-group">
+              <label className="label-enterprise">Work Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
+                <input 
+                  type="email" 
+                  required 
+                  className="input-enterprise pl-10" 
+                  placeholder="name@company.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                />
+              </div>
             </div>
-            <div style={{ position: 'relative' }}>
-              <Lock style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-              <input type={showPassword ? 'text' : 'password'} required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="Your security key" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#444', cursor: 'pointer' }}>
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+
+            <div className="form-group">
+              <div className="flex justify-between items-center mb-1">
+                <label className="label-enterprise !mb-0">Security Key</label>
+                <Link to="/forgot-password" size="sm" className="text-xs font-semibold text-brand-primary hover:text-blue-700 transition-colors">Forgot key?</Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  required 
+                  className="input-enterprise pl-10 pr-10" 
+                  placeholder="••••••••" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary hover:text-brand-text-primary p-1 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button 
+                type="submit" 
+                disabled={isLoading} 
+                className="w-full btn-primary !py-3 font-bold uppercase tracking-widest text-xs flex justify-center items-center gap-2"
+              >
+                {isLoading ? 'Verifying...' : 'Sign In'}
               </button>
             </div>
-          </div>
+          </form>
 
-          <button type="submit" disabled={isLoading} className="athiva-button" style={{ width: '100%', padding: '16px', marginTop: '32px', justifyContent: 'center' }}>
-            {isLoading ? 'Processing...' : 'Access Dashboard'} <ArrowRight size={20} />
-          </button>
-        </form>
+          <p className="mt-8 text-center text-xs text-brand-text-secondary font-medium">
+            New to the platform? <Link to="/register" className="text-brand-text-primary font-bold hover:text-brand-primary transition-colors">Create Hub Account</Link>
+          </p>
+        </div>
 
-        <p style={{ textAlign: 'center', marginTop: '32px', fontSize: '14px', color: '#666', fontWeight: 500 }}>
-          New to the portal? <Link to="/register" style={{ color: 'white', fontWeight: 900, textDecoration: 'none' }}>Enroll Now</Link>
-        </p>
-      </motion.div>
-
-      {/* Aesthetic Accents */}
-      <div style={{ position: 'absolute', bottom: '-100px', right: '-100px', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(163,255,18,0.05) 0%, transparent 70%)', borderRadius: '50%' }} />
+        <div className="text-center">
+           <p className="text-[10px] font-bold text-brand-text-secondary/40 uppercase tracking-widest">
+             Athiva Enterprise Security &bull; SSL Encrypted
+           </p>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,96 +1,134 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api/axiosInstance';
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'participant' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    const result = await register(formData);
-    if (result.success) navigate('/login');
-    else setError(result.message);
-    setIsLoading(false);
+    try {
+      await API.post('auth/register', formData);
+      navigate('/login');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Access enrollment failed.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-      <div className="mesh-glow" />
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }} 
-        animate={{ opacity: 1, scale: 1 }} 
-        className="athiva-card w-full max-w-md" 
-        style={{ padding: '48px', position: 'relative', zIndex: 10, backgroundColor: 'rgba(15,15,15,0.8)', backdropFilter: 'blur(10px)' }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ width: '56px', height: '56px', backgroundColor: '#A3FF12', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', transform: 'rotate(-10deg)', boxShadow: '0 0 30px rgba(163,255,18,0.3)' }}>
-            <div style={{ width: '28px', height: '28px', border: '4px solid black', borderRightColor: 'transparent', borderRadius: '50%', transform: 'rotate(45deg)' }} />
+    <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 bg-brand-primary text-white rounded-lg flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-brand-primary/20">
+            A
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.04em', color: 'white', marginBottom: '12px' }}>Join the Network.</h1>
-          <p style={{ color: '#666', fontWeight: 500 }}>Create your company account</p>
+          <h1 className="text-2xl font-bold text-brand-text-primary">Create Account</h1>
+          <p className="text-sm text-brand-text-secondary font-medium">Join the innovation network</p>
         </div>
 
-        {error && (
-          <div style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', fontSize: '13px', fontWeight: 600 }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Full Name</label>
-            <div style={{ position: 'relative' }}>
-              <User style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-              <input type="text" required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="Jane Doe" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+        <div className="bg-white border border-brand-border rounded-lg p-8 shadow-sm">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-md text-brand-danger text-xs font-medium mb-6 flex items-center gap-2">
+              <AlertCircle size={14} /> {error}
             </div>
-          </div>
+          )}
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Work Email</label>
-            <div style={{ position: 'relative' }}>
-              <Mail style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-              <input type="email" required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="name@company.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="form-group">
+              <label className="label-enterprise">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
+                <input 
+                  type="text" 
+                  required 
+                  className="input-enterprise pl-10" 
+                  placeholder="John Doe" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                />
+              </div>
             </div>
-          </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#444', width: '20px', height: '20px' }} />
-              <input type={showPassword ? 'text' : 'password'} required className="athiva-input" style={{ paddingLeft: '52px' }} placeholder="Must be secure" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#444', cursor: 'pointer' }}>
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            <div className="form-group">
+              <label className="label-enterprise">Work Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
+                <input 
+                  type="email" 
+                  required 
+                  className="input-enterprise pl-10" 
+                  placeholder="name@company.com" 
+                  value={formData.email} 
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="label-enterprise">Primary Role</label>
+              <select 
+                className="input-enterprise bg-white cursor-pointer"
+                value={formData.role} 
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              >
+                <option value="participant">Participant</option>
+                <option value="judge">Judge</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="label-enterprise">Security Key</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  required 
+                  className="input-enterprise pl-10 pr-10" 
+                  placeholder="••••••••" 
+                  value={formData.password} 
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary hover:text-brand-text-primary p-1 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button 
+                type="submit" 
+                disabled={isLoading} 
+                className="w-full btn-primary !py-3 font-bold uppercase tracking-widest text-xs"
+              >
+                {isLoading ? 'Creating Account...' : 'Complete Registration'}
               </button>
             </div>
-          </div>
+          </form>
 
-          <div style={{ marginBottom: '32px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#B3B3B3', marginBottom: '10px', marginLeft: '4px' }}>Joining As</label>
-            <select className="athiva-input" style={{ appearance: 'none', cursor: 'pointer' }} value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-              <option value="participant">Participant</option>
-              <option value="judge">Judge</option>
-            </select>
-          </div>
+          <p className="mt-8 text-center text-xs text-brand-text-secondary font-medium">
+            Already have an account? <Link to="/login" className="text-brand-text-primary font-bold hover:text-brand-primary transition-colors">Sign In Instead</Link>
+          </p>
+        </div>
 
-          <button type="submit" disabled={isLoading} className="athiva-button" style={{ width: '100%', padding: '16px', justifyContent: 'center' }}>
-            {isLoading ? 'Creating Account...' : 'Enroll in Portal'} <ArrowRight size={20} />
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: '32px', fontSize: '14px', color: '#666', fontWeight: 500 }}>
-          Already signed up? <Link to="/login" style={{ color: 'white', fontWeight: 900, textDecoration: 'none' }}>Access Here</Link>
-        </p>
-      </motion.div>
+        <div className="text-center">
+           <p className="text-[10px] font-bold text-brand-text-secondary/40 uppercase tracking-widest">
+             Athiva Enterprise Security &bull; SSL Encrypted
+           </p>
+        </div>
+      </div>
     </div>
   );
 };

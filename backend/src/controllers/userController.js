@@ -15,6 +15,18 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+// @desc    Get all judges
+// @route   GET /api/users/judges
+// @access  Private/Admin
+exports.getJudges = async (req, res) => {
+  try {
+    const judges = await User.find({ role: 'judge' }).select('name email').sort('-createdAt');
+    res.status(200).json({ success: true, count: judges.length, data: judges });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // @desc    Update user role
 // @route   PUT /api/users/:id/role
 // @access  Private/Admin

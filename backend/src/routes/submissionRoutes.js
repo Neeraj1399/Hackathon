@@ -3,7 +3,8 @@ const {
   submitProject,
   updateSubmission,
   getMySubmissions,
-  getHackathonSubmissions
+  getHackathonSubmissions,
+  getAllSubmissions
 } = require('../controllers/submissionController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -12,6 +13,7 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get('/', authorize('admin'), getAllSubmissions);
 router.post('/', authorize('participant'), submitProject);
 router.put('/:id', authorize('participant'), updateSubmission);
 router.get('/my', authorize('participant'), getMySubmissions);

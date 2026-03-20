@@ -1,28 +1,203 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axiosInstance';
-import Navbar from '../components/Navbar';
-import { Plus, Calendar, Clock, ArrowUpRight, Trophy, Zap, Edit, Trash2, Users, ClipboardCheck, Layout } from 'lucide-react';
+import { 
+  Plus, 
+  Calendar, 
+  Clock, 
+  Trophy, 
+  Users, 
+  ClipboardCheck, 
+  Layout, 
+  X, 
+  UserPlus,
+  Search,
+  CheckCircle2,
+  ChevronRight,
+  LayoutDashboard,
+  Edit,
+  Trash2,
+  Star,
+  FileCheck,
+  Zap,
+  Award
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import CountdownTimer from '../components/CountdownTimer';
-import Announcements from '../components/Announcements';
+
+const InviteJudgeModal = ({ isOpen, onClose, hackathon, onInvite }) => {
+  const [availableJudges, setAvailableJudges] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchJudges = async () => {
+        try {
+          const res = await API.get('users/judges');
+          const currentJudgeIds = hackathon.judges?.map(j => (j._id || j).toString()) || [];
+          const filtered = res.data.data.filter(j => !currentJudgeIds.includes(j._id.toString()));
+          setAvailableJudges(filtered);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchJudges();
+    }
+  }, [isOpen, hackathon]);
+
+  const filteredJudges = availableJudges.filter(j => 
+    j.name.toLowerCase().includes(search.toLowerCase()) || 
+    j.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-brand-dark/20 backdrop-blur-sm"
+        />
+        <motion.div 
+          initial={{ opacity: 0, y: 20, scale: 0.95 }} 
+          animate={{ opacity: 1, y: 0, scale: 1 }} 
+          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-brand-border"
+        >
+          <div className="p-6 border-b border-brand-border flex items-center justify-between bg-gray-50/50">
+            <div>
+              <h2 className="text-xl font-bold text-brand-dark">Invite Judge</h2>
+              <p className="text-xs font-medium text-brand-secondary mt-1 uppercase tracking-wider">{hackathon.title}</p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-white rounded-lg transition-colors text-brand-secondary">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="p-6">
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary/40" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search judges by name or email..." 
+                className="input-enterprise pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="max-h-[350px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+              {loading ? (
+                <div className="flex flex-col items-center py-10 text-brand-secondary">
+                  <div className="w-8 h-8 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-3" />
+                  <p className="text-sm font-medium">Syncing judge directory...</p>
+                </div>
+              ) : filteredJudges.length === 0 ? (
+                <div className="text-center py-10 px-4 bg-gray-50 rounded-xl border border-dashed border-brand-border">
+                  <p className="text-sm text-brand-muted font-medium">No available judges found matching your search.</p>
+                </div>
+              ) : (
+                filteredJudges.map(judge => (
+                  <div key={judge._id} className="flex items-center justify-between p-4 bg-white border border-brand-border rounded-xl hover:border-brand-primary/30 transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-brand-primary/5 flex items-center justify-center text-brand-primary font-bold text-sm">
+                        {judge.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-brand-dark">{judge.name}</div>
+                        <div className="text-[11px] font-medium text-brand-secondary">{judge.email}</div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => onInvite(judge._id)}
+                      className="btn-primary py-1.5 px-4 text-xs flex items-center gap-2"
+                    >
+                      <UserPlus size={14} /> Invite
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          <div className="p-6 bg-gray-50 border-t border-brand-border flex justify-end">
+            <button onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [hackathons, setHackathons] = useState([]);
   const [mySubmissions, setMySubmissions] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [selectedHackathon, setSelectedHackathon] = useState(null);
+
+  const [stats, setStats] = useState({ totalParticipants: 0, totalSubmissions: 0, activeTracks: 0, pendingReviews: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [hackRes, subRes] = await Promise.all([
+        const [hackRes, subRes, activityRes] = await Promise.all([
           API.get('hackathons'),
-          user?.role === 'participant' ? API.get('submissions/my') : Promise.resolve({ data: { data: [] } })
+          user?.role === 'participant' ? API.get('submissions/my') : Promise.resolve({ data: { data: [] } }),
+          user?.role === 'admin' ? API.get('submissions') : Promise.resolve({ data: { data: [] } })
         ]);
+
+        let statsData = {};
+        if (user?.role === 'admin') {
+          const res = await API.get('hackathons/stats/overview');
+          statsData = res.data.data;
+        } else if (user?.role === 'judge') {
+          const res = await API.get('hackathons/stats/judge');
+          statsData = res.data.data;
+        } else if (user?.role === 'participant') {
+          // For participant, we derive stats from their subRes and fetch evaluation for latest
+          const mySubs = subRes.data.data;
+          const latestSub = mySubs[0];
+          let score = 0;
+          if (latestSub) {
+            try {
+              const evalRes = await API.get(`evaluations/my/${latestSub._id}`);
+              const evals = evalRes.data.data;
+              if (evals.length > 0) {
+                score = evals.reduce((acc, curr) => acc + curr.totalScore, 0) / evals.length;
+              }
+            } catch (e) {
+              console.log('No evaluation yet');
+            }
+          }
+          
+          const activeHackathons = hackRes.data.data.filter(h => h.isActive).length;
+          
+          statsData = {
+            submissionCount: mySubs.length,
+            activeHackathons,
+            myScore: score.toFixed(1),
+            hasSubmissions: mySubs.length > 0
+          };
+        }
+
         setHackathons(hackRes.data.data);
         setMySubmissions(subRes.data.data);
+        setActivity(user?.role === 'admin' ? activityRes.data.data : subRes.data.data);
+        setStats(statsData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -38,245 +213,207 @@ const Dashboard = () => {
   };
 
   const getSubmissionStatus = (hackathonId) => {
-    const userId = user?.id || user?._id;
     return mySubmissions.find(s => (s.hackathonId?._id || s.hackathonId)?.toString() === hackathonId?.toString());
   };
 
+  const handleDeleteHackathon = async (id, title) => {
+    if (window.confirm(`Are you sure you want to permanently delete "${title}"? This will remove all associated submissions and evaluations.`)) {
+      try {
+        await API.delete(`hackathons/${id}`);
+        setHackathons(hackathons.filter(h => h._id !== id));
+      } catch (err) {
+        alert(err.response?.data?.message || 'Deletion failed.');
+      }
+    }
+  };
+
+  const getStatsConfig = () => {
+    if (user?.role === 'admin') {
+      return [
+        { label: 'Total Participants', value: stats.totalParticipants || 0, icon: <Users size={20} />, color: 'text-blue-600' },
+        { label: 'Total Submissions', value: stats.totalSubmissions || 0, icon: <ClipboardCheck size={20} />, color: 'text-green-600' },
+        { label: 'Active Hackathons', value: stats.activeTracks || 0, icon: <Trophy size={20} />, color: 'text-brand-primary' },
+        { label: 'Pending Reviews', value: stats.pendingReviews || 0, icon: <Layout size={20} />, color: 'text-warning' }
+      ];
+    } else if (user?.role === 'judge') {
+      return [
+        { label: 'Assigned Projects', value: stats.assignedSubmissions || 0, icon: <Layout size={20} />, color: 'text-indigo-600' },
+        { label: 'Completed Reviews', value: stats.reviewedCount || 0, icon: <CheckCircle2 size={20} />, color: 'text-emerald-600' },
+        { label: 'Pending Reviews', value: stats.pendingReviews || 0, icon: <Clock size={20} />, color: 'text-amber-600' }
+      ];
+    } else {
+      // Participant View
+      return [
+        { label: 'My Submissions', value: stats.submissionCount || 0, icon: <FileCheck size={20} />, color: 'text-sky-600' },
+        { label: 'Active Hackathons', value: stats.activeHackathons || 0, icon: <Zap size={20} />, color: 'text-brand-primary' },
+        { label: 'My Latest Score', value: stats.myScore || '0.0', icon: <Award size={20} />, color: 'text-rose-600' }
+      ];
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000', position: 'relative' }}>
-      <div className="mesh-glow" />
-      <Navbar />
-      
-      <main className="responsive-main" style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 40px' }}>
-        {/* Header Section */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '40px', marginBottom: '80px' }}>
-          <div className="flex-1">
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'rgba(163,255,18,0.1)', border: '1px solid rgba(163,255,18,0.2)', borderRadius: '999px', fontSize: '12px', fontWeight: 800, color: '#A3FF12', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '24px' }}>
-                <Zap size={14} /> {user?.role} Workspace
-              </div>
-            </motion.div>
-            <h1 className="responsive-heading" style={{ fontSize: '56px', fontWeight: 900, letterSpacing: '-0.05em', marginBottom: '16px', color: 'white', lineHeight: 1 }}>
-              Welcome back, <span className="neon-text">{user?.name}.</span>
-            </h1>
-            <p style={{ fontSize: '18px', color: '#666', maxWidth: '580px', lineHeight: 1.6, fontWeight: 500 }}>
-              {user?.role === 'admin' ? 'Manage your ecosystem events and track participant performance.' : 
-               user?.role === 'judge' ? 'Review groundbreaking projects and score innovation.' :
-               'Submit your vision and compete for the top spot on the leaderboard.'}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {user?.role === 'admin' && (
-              <>
-                <Link to="/admin/create-hackathon" className="athiva-button" style={{ padding: '16px 32px' }}>
-                  Host Hackathon <Plus size={18} />
-                </Link>
-                <div className="flex gap-2">
-                  <Link to="/admin/users" className="bg-gray-900 text-gray-400 p-3 rounded-xl border border-gray-800 hover:text-white transition group" title="User Management">
-                    <Users size={20} className="group-hover:scale-110 transition" />
-                  </Link>
-                  {/* Judge Requests Icon removed from here - moved to cards */}
-                </div>
-              </>
-            )}
-            {user?.role === 'judge' && (
-              <Link to="/judge/join" className="athiva-button" style={{ padding: '16px 24px' }}>
-                Find Hackathons <ArrowUpRight size={18} />
-              </Link>
-            )}
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Main Content Area */}
-          <div className="lg:col-span-2">
-            <Announcements user={user} />
-
-            <section>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px', paddingBottom: '24px', borderBottom: '1px solid #1A1A1A' }}>
-                <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.02em' }}>
-                  {user?.role === 'judge' ? 'Assigned Tracks' : 'Active tracks'}
-                </h2>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#666' }}>{hackathons.length} Total</div>
-              </div>
-
-              {loading ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '32px' }}>
-                  {[1, 2].map(i => (
-                    <div key={i} style={{ height: '360px', backgroundColor: '#0F0F0F', border: '1px solid #1A1A1A', borderRadius: '32px' }} className="animate-pulse" />
-                  ))}
-                </div>
-              ) : hackathons.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 40px', backgroundColor: '#0F0F0F', border: '2px dashed #1A1A1A', borderRadius: '32px' }}>
-                  <Trophy style={{ width: '40px', height: '40px', color: '#1A1A1A', margin: '0 auto 16px' }} />
-                  <p style={{ color: '#666' }}>No tracks currently available.</p>
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {hackathons.map((hackathon, idx) => {
-                    const submission = getSubmissionStatus(hackathon._id);
-                    const pendingRequests = hackathon.judgeRequests?.filter(r => r.status === 'pending') || [];
-                    
-                    return (
-                      <motion.div
-                        key={hackathon._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="athiva-card"
-                        style={{ padding: '40px', display: 'flex', flexDirection: 'column', border: '1px solid #1F1F1F' }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                            <div style={{ width: '48px', height: '48px', backgroundColor: '#000', border: '1px solid #333', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 900, color: '#A3FF12' }}>
-                              {hackathon.title.charAt(0)}
-                            </div>
-                            <div className="flex gap-3 items-center">
-                               {user?.role === 'admin' && pendingRequests.length > 0 && (
-                                 <Link 
-                                   to="/admin/judge-requests" 
-                                   className="bg-gray-900 text-gray-400 p-2.5 rounded-xl border border-gray-800 hover:text-white transition group relative"
-                                   title={`Judge Requests (${pendingRequests.length})`}
-                                 >
-                                   <Users size={18} className="group-hover:scale-110 transition" />
-                                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 text-black text-[9px] font-black rounded-full flex items-center justify-center">
-                                     {pendingRequests.length}
-                                   </span>
-                                 </Link>
-                               )}
-                               <div style={{ padding: '6px 14px', backgroundColor: '#1A1A1A', color: 'white', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', borderRadius: '999px', border: '1px solid #333' }}>
-                                 Open
-                               </div>
-                             </div>
-                           </div>
-                           
-                           <h3 style={{ fontSize: '26px', fontWeight: 900, marginBottom: '24px', color: 'white', letterSpacing: '-0.03em' }}>{hackathon.title}</h3>
-
-                           <div style={{ marginBottom: '32px', padding: '24px', backgroundColor: '#000', border: '1px solid #1A1A1A', borderRadius: '20px' }}>
-                             <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#444', letterSpacing: '0.1em', marginBottom: '12px' }}>Ends in:</div>
-                             <CountdownTimer deadline={hackathon.submissionDeadline} />
-                           </div>
-
-                          <p style={{ color: '#666', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px', fontWeight: 500, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {hackathon.description}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <div style={{ display: 'flex', gap: '24px', marginBottom: '32px', color: '#B3B3B3' }}>
-                            <div>
-                              <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px', color: '#444' }}>Begins</div>
-                              <div style={{ fontSize: '14px', fontWeight: 700 }}>{new Date(hackathon.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
-                            </div>
-                            <div style={{ width: '1px', backgroundColor: '#1F1F1F' }} />
-                            <div>
-                              <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px', color: '#444' }}>Deadline</div>
-                              <div style={{ fontSize: '14px', fontWeight: 700 }}>{new Date(hackathon.submissionDeadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
-                            </div>
-                            <div style={{ width: '1px', backgroundColor: '#1F1F1F' }} />
-                            <Link to={`/leaderboard/${hackathon._id}`} title="View Leaderboard" className="flex flex-col items-center justify-center text-gray-600 hover:text-yellow-500 transition">
-                              <Trophy size={18} />
-                              <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', marginTop: '4px' }}>Rank</span>
-                            </Link>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-4 items-center">
-                            {user?.role === 'participant' && (
-                              <Link 
-                                to={submission ? `/submit-project/${hackathon._id}` : `/submit-project/${hackathon._id}`} // Simplified for now as edit logic might be same page
-                                className="athiva-button"
-                                style={{ flex: 1, justifyContent: 'center', padding: '14px' }}
-                              >
-                                {submission ? 'Update Submission' : 'Explore Track'} <ArrowUpRight size={18} />
-                              </Link>
-                            )}
-
-                            {user?.role === 'judge' && (
-                              isJudgedByMe(hackathon) ? (
-                                <Link 
-                                  to={`/judge/evaluations/${hackathon._id}`}
-                                  className="athiva-button"
-                                  style={{ flex: 1, justifyContent: 'center', padding: '14px' }}
-                                >
-                                  Review Projects <ClipboardCheck size={18} />
-                                </Link>
-                              ) : (
-                                <button 
-                                  onClick={async () => {
-                                    try {
-                                      await API.post(`hackathons/${hackathon._id}/judge-request`);
-                                      alert('Request sent successfully!');
-                                      window.location.reload();
-                                    } catch (err) {
-                                      alert(err.response?.data?.message || 'Error sending request');
-                                    }
-                                  }}
-                                  className="athiva-button"
-                                  style={{ flex: 1, justifyContent: 'center', padding: '14px' }}
-                                  disabled={hackathon.judgeRequests?.some(r => {
-                                    const userId = user?.id || user?._id;
-                                    return (r.user?._id || r.user)?.toString() === userId?.toString() && r.status === 'pending';
-                                  })}
-                                >
-                                  {hackathon.judgeRequests?.some(r => {
-                                    const userId = user?.id || user?._id;
-                                    return (r.user?._id || r.user)?.toString() === userId?.toString() && r.status === 'pending';
-                                  }) ? 'Request Pending' : 'Request to Judge'} <Plus size={18} />
-                                </button>
-                              )
-                            )}
-
-                            {user?.role === 'admin' && (
-                              <div className="flex gap-2 w-full">
-                                <Link to={`/admin/edit-hackathon/${hackathon._id}`} className="athiva-button" style={{ flex: 1, justifyContent: 'center', padding: '14px' }}>
-                                  Edit Track <Edit size={18} />
-                                </Link>
-                                <button 
-                                  onClick={async () => {
-                                    if (window.confirm('Delete permenantly?')) {
-                                      await API.delete(`hackathons/${hackathon._id}`);
-                                      window.location.reload();
-                                    }
-                                  }}
-                                  style={{ width: '48px', height: '48px', backgroundColor: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}
-                                >
-                                  <Trash2 size={20} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-
-          {/* Sidebar Area */}
-          <div className="space-y-8">
-            <div className="bg-gray-900/50 p-6 rounded-3xl border border-gray-800">
-              <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                <Layout size={18} className="text-indigo-400" /> Platform Stats
-              </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Active Hackathons</span>
-                  <span className="text-white font-bold">{hackathons.length}</span>
-                </div>
-                {user?.role === 'participant' && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">My Submissions</span>
-                    <span className="text-white font-bold">{mySubmissions.length}</span>
-                  </div>
-                )}
-              </div>
+    <div className="space-y-8">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {getStatsConfig().map((stat, i) => (
+          <div key={i} className="bg-white border border-brand-border rounded-xl p-5 shadow-sm flex items-center gap-4 hover:border-brand-primary transition-colors">
+            <div className={`w-12 h-12 rounded-xl bg-gray-50 ${stat.color} flex items-center justify-center shrink-0 border border-brand-border/50`}>
+              {stat.icon}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-brand-text-secondary uppercase tracking-[0.1em] mb-0.5">{stat.label}</span>
+              <span className="text-2xl font-black text-brand-text-primary leading-tight">{stat.value}</span>
             </div>
           </div>
+        ))}
+      </div>
+
+      <div className="space-y-8">
+        {/* Main Section */}
+        <div className="space-y-8">
+          {/* Active Tracks */}
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-brand-text-primary">Live Hackathons</h2>
+              {user?.role === 'admin' && (
+                <Link to="/admin/create-hackathon" className="btn-primary flex items-center gap-2">
+                  <Plus size={16} /> Host Hackathon
+                </Link>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              {loading ? (
+                <div className="h-40 bg-white border border-brand-border rounded-lg animate-pulse" />
+              ) : hackathons.length === 0 ? (
+                <div className="p-12 text-center bg-white border border-brand-border rounded-lg border-dashed">
+                  <p className="text-sm text-brand-text-secondary">No live hackathons found in the registry.</p>
+                </div>
+              ) : (
+                hackathons.map((hackathon) => (
+                  <div key={hackathon._id} className="card-enterprise !p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-blue-50 text-brand-primary rounded-md flex items-center justify-center font-bold">
+                        {hackathon.title.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-brand-text-primary">{hackathon.title}</h3>
+                        <p className="text-xs text-brand-text-secondary mt-0.5 line-clamp-1">{hackathon.description}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="hidden sm:block text-right">
+                        <p className="text-[11px] font-bold text-brand-text-secondary uppercase">Deadline</p>
+                        <p className="text-xs font-semibold text-brand-text-primary mt-0.5">
+                          {new Date(hackathon.submissionDeadline).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {user?.role === 'participant' && (
+                          <Link to={`/submit-project/${hackathon._id}`} className="btn-primary">
+                            Participate
+                          </Link>
+                        )}
+                        {(user?.role === 'judge' && isJudgedByMe(hackathon)) && (
+                          <Link to={`/admin/submissions/${hackathon._id}`} className="btn-primary">
+                            Review Submissions
+                          </Link>
+                        )}
+                        {user?.role === 'admin' && (
+                          <div className="flex items-center gap-1">
+                            <Link to={`/admin/submissions/${hackathon._id}`} title="View Submissions" className="p-2 text-brand-text-secondary hover:text-brand-primary">
+                              <ClipboardCheck size={18} />
+                            </Link>
+                            <Link to={`/admin/edit-hackathon/${hackathon._id}`} title="Edit" className="p-2 text-brand-text-secondary hover:text-brand-primary">
+                              <Edit size={18} />
+                            </Link>
+                            <button 
+                              onClick={() => handleDeleteHackathon(hackathon._id, hackathon.title)}
+                              className="p-2 text-brand-text-secondary hover:text-brand-danger transition-colors"
+                              title="Delete Hackathon"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setSelectedHackathon(hackathon);
+                                setInviteModalOpen(true);
+                              }}
+                              className="p-2 text-brand-text-secondary hover:text-brand-primary"
+                              title="Invite Judge"
+                            >
+                              <UserPlus size={18} />
+                            </button>
+                          </div>
+                        )}
+                        <Link to={`/leaderboard/${hackathon._id}`} className="p-2 text-brand-text-secondary hover:text-brand-primary" title="Leaderboard">
+                          <Trophy size={18} />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          {/* Recent Activity (Flex Rows) */}
+          <section>
+            <h2 className="text-base font-bold text-brand-text-primary mb-5">{user?.role === 'admin' ? 'Recent Global Activity' : 'Your Latest Submissions'}</h2>
+            <div className="bg-white border border-brand-border rounded-lg overflow-hidden shadow-sm">
+              {activity.length === 0 ? (
+                <div className="p-12 text-center text-sm text-brand-text-secondary italic">
+                  No recent activity logged in the registry.
+                </div>
+              ) : (
+                activity.slice(0, 5).map((item) => (
+                  <div key={item._id} className="list-row hover:bg-gray-50/80 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-brand-primary" />
+                      <div>
+                        <p className="text-sm font-semibold text-brand-text-primary">{item.projectTitle}</p>
+                        <p className="text-xs text-brand-text-secondary">
+                          {user?.role === 'admin' && `${item.userId?.name} for `} {item.hackathonId?.title}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] font-bold text-brand-text-secondary uppercase">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </span>
+                      {user?.role === 'admin' && (
+                        <Link to={`/admin/submissions/${item.hackathonId?._id}`} className="text-brand-primary text-xs font-bold hover:underline">
+                          Review
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
         </div>
-      </main>
+
+      </div>
+
+      {selectedHackathon && (
+        <InviteJudgeModal 
+          isOpen={inviteModalOpen} 
+          onClose={() => setInviteModalOpen(false)} 
+          hackathon={selectedHackathon}
+          onInvite={async (judgeId) => {
+            try {
+              await API.post(`hackathons/${selectedHackathon._id}/invite-judge`, { userId: judgeId });
+              setInviteModalOpen(false);
+              window.location.reload();
+            } catch (err) {
+              alert(err.response?.data?.message || 'Dispatch failed.');
+            }
+          }}
+        />
+      )}
+
     </div>
   );
 };

@@ -20,7 +20,8 @@ const seedAdmin = async () => {
       name: 'Super Admin',
       email: adminEmail,
       password: 'admin123',
-      role: 'admin'
+      role: 'Super Admin',
+      systemRole: 'admin'
     });
     
     console.log('Admin user created successfully.');

@@ -47,9 +47,15 @@ const hackathonSchema = new mongoose.Schema({
   },
   isStartEmailSent: { type: Boolean, default: false },
   isDeadlineAlertSent: { type: Boolean, default: false },
-  isEndEmailSent: { type: Boolean, default: false }
+  isEndEmailSent: { type: Boolean, default: false },
+  isCompleted: { type: Boolean, default: false }
 },
 { timestamps: true }
 );
+
+// High-frequency query indexes
+hackathonSchema.index({ isActive: 1 });
+hackathonSchema.index({ judges: 1 });
+hackathonSchema.index({ submissionDeadline: 1 });
 
 module.exports = mongoose.model('Hackathon', hackathonSchema);

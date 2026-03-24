@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import API from '../api/axiosInstance';
 import { 
   Users, 
@@ -8,41 +9,140 @@ import {
   CheckCircle, 
   ArrowRight, 
   Key, 
-  XCircle, 
-  Clock,
+  X,
+  Plus,
   Search,
-  Filter,
-  MoreVertical,
-  Mail,
-  Calendar,
+  ChevronDown,
+  Monitor,
+  Briefcase,
+  Layers,
+  ChevronRight,
   ShieldAlert,
-  Plus
+  Clock
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import ConfirmationModal from '../components/ConfirmationModal';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const UserEditModal = ({ isOpen, onClose, user, onUpdate }) => {
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    systemRole: user?.systemRole || 'participant'
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        systemRole: user.systemRole || 'participant'
+      });
+    }
+  }, [user]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (user?.email === 'adminhackathon@gmail.com' && formData.systemRole !== 'admin') {
+      toast.error('Security Error: Core Super Admin access level cannot be demoted.', { icon: '🛡️' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await API.patch(`users/${user._id}`, formData);
+      if (res.data.success) {
+        onUpdate(res.data.data);
+        onClose();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Update failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border border-brand-border">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+              <Users size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-brand-text-primary tracking-tight">Edit Profile</h2>
+              <p className="text-[10px] font-black text-brand-text-secondary uppercase tracking-widest mt-0.5">Edit User Details</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+
+
+          <div className="space-y-4.5 focus-within:text-brand-primary group">
+            <label className="text-[10px] font-black text-brand-muted uppercase tracking-widest">Full Name</label>
+            <input 
+              type="text" 
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              required
+              className="w-full bg-brand-bg border border-brand-border rounded-xl py-3 px-4 text-xs font-bold text-brand-dark transition-all outline-none focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-brand-primary/5"
+            />
+          </div>
+
+          <div className="space-y-4.5 focus-within:text-brand-primary group">
+            <label className="text-[10px] font-black text-brand-muted uppercase tracking-widest">Email</label>
+            <input 
+              type="email" 
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              required
+              className="w-full bg-brand-bg border border-brand-border rounded-xl py-3 px-4 text-xs font-bold text-brand-dark transition-all outline-none focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-brand-primary/5"
+            />
+          </div>
+
+          <div className="space-y-4.5 focus-within:text-brand-primary group">
+            <label className="text-[10px] font-black text-brand-muted uppercase tracking-widest">System Access Level</label>
+            <select 
+              value={formData.systemRole}
+              onChange={(e) => setFormData({...formData, systemRole: e.target.value})}
+              disabled={user?.email === 'adminhackathon@gmail.com'}
+              className="w-full bg-brand-bg border border-brand-border rounded-xl py-3 px-4 text-xs font-bold text-brand-dark transition-all outline-none focus:border-brand-primary focus:bg-white ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="participant">Participant</option>
+              <option value="judge">Judge</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+
+
+          <div className="flex gap-4 pt-6 border-t border-brand-border mt-2">
+            <button type="submit" disabled={loading} className="flex-1 btn-primary !py-3.5 font-black uppercase text-xs tracking-widest shadow-lg shadow-brand-primary/20">Commit Changes</button>
+            <button type="button" onClick={onClose} className="flex-1 btn-secondary !py-3.5 font-black uppercase text-xs tracking-widest">Discard</button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [resetRequests, setResetRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [requestsLoading, setRequestsLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' });
   const [search, setSearch] = useState('');
-  
-  // Modal State
-  const [modal, setModal] = useState({ 
-    isOpen: false, 
-    userId: null, 
-    userEmail: '', 
-    newRole: '' 
-  });
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchUsers = async () => {
     try {
       const res = await API.get('users');
       setUsers(res.data.data);
     } catch (err) {
-      setMessage({ type: 'error', text: 'Cloud registry sync failed.' });
+      console.error('Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -64,241 +164,208 @@ const UserManagement = () => {
     fetchResetRequests();
   }, []);
 
-  const handleRoleChangeRequest = (userId, userEmail, newRole) => {
-    if (userEmail === 'adminhackathon@gmail.com') {
-      alert('Security override: System administrator privileges are immutable.');
-      return;
-    }
-    setModal({ isOpen: true, userId, userEmail, newRole });
-  };
-
-  const confirmRoleChange = async () => {
-    const { userId, userEmail, newRole } = modal;
-    setModal({ ...modal, isOpen: false });
-
-    try {
-      await API.put(`users/${userId}/role`, { role: newRole });
-      setMessage({ type: 'success', text: `Access permissions updated for ${userEmail}.` });
-      fetchUsers();
-    } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Permission escalation denied.' });
-      fetchUsers();
-    }
+  const handleUpdate = (updatedUser) => {
+    setUsers(users.map(u => u._id === updatedUser._id ? updatedUser : u));
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Deprovision this user from the main directory?')) return;
-    try {
-      await API.delete(`users/${userId}`);
-      setMessage({ type: 'success', text: 'User deprovisioned successfully.' });
-      fetchUsers();
-    } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Deprovisioning failed.' });
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-4 p-1 text-sm font-bold text-brand-dark">
+        <p>Delete this user from the main directory?</p>
+        <div className="flex justify-end gap-4 mt-2">
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-black text-brand-muted hover:bg-slate-100 rounded-md transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await API.delete(`users/${userId}`);
+                toast.success('User deleted successfully.');
+                fetchUsers();
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Deletion failed.');
+              }
+            }} 
+            className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-black bg-brand-danger text-white hover:bg-red-700 rounded-md transition-all shadow-sm"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '300px' } });
   };
 
   const handleApproveReset = async (requestId) => {
     try {
       await API.post(`users/reset-requests/${requestId}/approve`);
-      setMessage({ type: 'success', text: 'Authentication override authorized.' });
+      toast.success('Authentication override authorized.');
       fetchResetRequests();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Authorization protocol failed.' });
+      toast.error('Authorization failed.');
     }
   };
 
   const handleRejectReset = async (requestId) => {
     try {
       await API.post(`users/reset-requests/${requestId}/reject`);
-      setMessage({ type: 'success', text: 'Authentication override rejected.' });
+      toast.success('Authentication override rejected.');
       fetchResetRequests();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Rejection protocol failed.' });
+      toast.error('Rejection failed.');
     }
   };
-
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) || 
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const roleStyles = {
+    admin: 'bg-red-50 text-red-600 border-red-100',
+    judge: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    participant: 'bg-slate-50 text-slate-600 border-slate-100'
+  };
+
   return (
-    <div className="min-h-full">
-      {/* Header */}
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="space-y-4 pb-12">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-brand-primary font-black text-[10px] uppercase tracking-[0.2em] mb-3">
-            <div className="w-6 h-1 bg-brand-primary rounded-full" /> Management Registry
+          <div className="flex items-center gap-4 text-brand-primary font-black text-[10px] uppercase tracking-[0.2em] mb-3">
+            <div className="w-6 h-1 bg-brand-primary rounded-full" /> Organizational Directory
           </div>
-          <h1 className="text-4xl font-black text-brand-dark tracking-tight">Identity Directory</h1>
+          <h1 className="text-4xl font-black text-brand-dark tracking-tight">Users Registry</h1>
           <p className="text-brand-muted mt-2 font-medium max-w-xl">
-             Supervise corporate accounts, manage role-based access protocols, and ensure secure ecosystem participation.
+             Supervise corporate accounts, manage role-based access, and ensure secure ecosystem participation.
           </p>
         </div>
-        
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary" size={18} />
+          <input 
+            type="text" 
+            placeholder="Search by name or email..." 
+            className="w-full bg-white border border-brand-border rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold shadow-sm focus:border-brand-primary outline-none transition-all"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </header>
 
-      {message.text && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }} 
-          animate={{ opacity: 1, y: 0 }}
-          className={`p-5 rounded-2xl mb-10 flex items-center gap-3 text-sm font-bold border ${
-            message.type === 'success' 
-            ? 'bg-brand-success/5 border-brand-success/20 text-brand-success' 
-            : 'bg-brand-danger/5 border-brand-danger/20 text-brand-danger'
-          } shadow-sm`}
-        >
-          {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-          {message.text}
-        </motion.div>
-      )}
-
-      {/* Main Directory List */}
-      <div className="bg-white border border-brand-border rounded-lg shadow-sm overflow-hidden">
-        <div className="bg-brand-section px-6 py-4 border-b border-brand-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-bold text-brand-text-primary uppercase tracking-wider">Identity Registry</h2>
-            <span className="px-2 py-0.5 bg-blue-50 text-brand-primary text-[10px] font-bold rounded border border-blue-100">
-               {filteredUsers.length} Entries
-            </span>
-          </div>
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={14} />
-            <input 
-              type="text" 
-              placeholder="Search by identity or email..." 
-              className="w-full bg-white border border-brand-border rounded-md py-1.5 pl-9 pr-4 text-xs focus:border-brand-primary outline-none"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+           {[...Array(6)].map((_, i) => <div key={i} className="h-48 bg-white border border-brand-border rounded-2xl" />)}
         </div>
-
-        <div className="divide-y divide-brand-border">
-          {loading ? (
-             <div className="p-12 text-center text-sm text-brand-text-secondary animate-pulse">Synchronizing organizational data...</div>
-          ) : filteredUsers.length === 0 ? (
-             <div className="p-12 text-center text-sm text-brand-text-secondary italic">No matches found in the active directory.</div>
-          ) : (
-            filteredUsers.map((u) => (
-              <div key={u._id} className="list-row group !px-6 !py-4">
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredUsers.map((u) => (
+            <motion.div 
+              key={u._id} 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-brand-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-primary/20 transition-all group relative overflow-hidden"
+            >
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded bg-brand-section flex items-center justify-center text-brand-primary font-bold text-sm border border-brand-border">
+                  <div className="w-10 h-10 rounded-xl bg-brand-bg border border-brand-border flex items-center justify-center text-brand-primary font-black shadow-inner">
                     {u.name.charAt(0)}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                       <p className="text-sm font-bold text-brand-text-primary">{u.name}</p>
-                       {u.email === 'adminhackathon@gmail.com' && <ShieldCheck size={14} className="text-brand-success" />}
-                    </div>
-                    <p className="text-xs text-brand-text-secondary">{u.email}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-brand-dark truncate flex items-center gap-4">
+                       {u.name}
+                       {u.email === 'adminhackathon@gmail.com' && <ShieldCheck size={14} className="text-brand-success shrink-0" />}
+                    </p>
+                    <p className="text-[10px] font-bold text-brand-muted truncate uppercase tracking-tighter">{u.email}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-8">
-                  <div className="hidden lg:block text-right">
-                    <p className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-tight">Access Authorization</p>
-                    <select 
-                      disabled={u.email === 'adminhackathon@gmail.com'}
-                      value={u.role} 
-                      onChange={(e) => handleRoleChangeRequest(u._id, u.email, e.target.value)}
-                      className="bg-transparent text-xs font-semibold text-brand-primary border-0 p-0 focus:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="participant">Participant</option>
-                      <option value="judge">Judge</option>
-                      <option value="admin">Administrator</option>
-                    </select>
-                  </div>
-                  
-                  <div className="hidden md:block w-32">
-                     <p className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-tight">Registry Date</p>
-                     <p className="text-xs font-medium text-brand-text-primary mt-0.5">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                     </p>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button className="p-2 text-brand-text-secondary hover:text-brand-primary transition-colors hover:bg-brand-bg rounded-md">
-                      <Search size={14} />
-                    </button>
-                    <button 
-                      disabled={u.email === 'adminhackathon@gmail.com'}
-                      onClick={() => handleDeleteUser(u._id)}
-                      className="p-2 text-brand-text-secondary hover:text-brand-danger transition-colors hover:bg-red-50 rounded-md disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Deactivate Account"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${roleStyles[u.systemRole]}`}>
+                   {u.systemRole}
                 </div>
               </div>
-            ))
-          )}
+
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => { setSelectedUser(u); setIsModalOpen(true); }}
+                  className="flex-1 btn-secondary !py-2.5 !text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-4 group-hover:bg-brand-primary group-hover:text-white transition-colors border-0 ring-1 ring-brand-border group-hover:ring-brand-primary shadow-sm"
+                >
+                  Edit <ChevronRight size={14} />
+                </button>
+                <button 
+                  onClick={() => handleDeleteUser(u._id)}
+                  disabled={u.email === 'adminhackathon@gmail.com'}
+                  className="p-2.5 text-brand-muted hover:text-brand-danger hover:bg-red-50 border border-brand-border rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </motion.div>
+          ))}
         </div>
-      </div>
+      )}
 
       {/* Security Overrides Section */}
-      <section className="mt-12">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-red-50 text-brand-danger rounded-lg flex items-center justify-center border border-red-100">
-            <ShieldAlert size={20} />
+      <section className="mt-16 pt-10 border-t border-brand-border">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 bg-red-50 text-brand-danger rounded-2xl flex items-center justify-center border border-red-100 shadow-sm">
+            <ShieldAlert size={24} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-brand-text-primary">Security Override Queue</h2>
-            <p className="text-xs text-brand-text-secondary">Action required for identity recovery protocols.</p>
+            <h2 className="text-xl font-black text-brand-dark tracking-tight">Security Override Queue</h2>
+            <p className="text-xs font-bold text-brand-muted uppercase tracking-wider">Password Reset Approvals</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {requestsLoading ? (
-             <div className="col-span-full h-32 bg-white border border-brand-border rounded-lg animate-pulse" />
+             [...Array(3)].map((_, i) => <div key={i} className="h-40 bg-white border border-brand-border rounded-2xl animate-pulse" />)
           ) : resetRequests.filter(r => r.status === 'pending').length === 0 ? (
-             <div className="col-span-full p-8 text-center bg-white border border-brand-border rounded-lg border-dashed">
-                <p className="text-sm text-brand-text-secondary">No pending authentication overrides in the queue.</p>
+             <div className="col-span-full p-12 text-center bg-white border-2 border-dashed border-brand-border rounded-2xl">
+                <p className="text-sm font-bold text-brand-muted uppercase tracking-widest italic tracking-widest">No pending authentication overrides in the queue.</p>
              </div>
           ) : (
             resetRequests.filter(r => r.status === 'pending').map((r) => (
-              <div key={r._id} className="card-enterprise !p-5 border-l-4 border-l-brand-warning">
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} key={r._id} className="bg-white border-l-4 border-l-brand-danger border-y border-r border-brand-border rounded-2xl p-6 shadow-sm">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-sm font-bold text-brand-text-primary">{r.userId?.name}</p>
-                    <p className="text-xs text-brand-text-secondary mt-0.5">{r.userId?.email}</p>
+                    <p className="text-sm font-black text-brand-dark">{r.user?.name}</p>
+                    <p className="text-[10px] font-bold text-brand-muted uppercase tracking-tighter mt-0.5">{r.user?.email}</p>
                   </div>
-                  <span className="badge-enterprise badge-warning">Pending</span>
+                  <span className="px-2 py-0.5 bg-red-50 text-brand-danger text-[9px] font-black uppercase tracking-widest rounded border border-red-100">Action Required</span>
                 </div>
                 
-                <div className="flex items-center gap-2 mb-4 text-[11px] font-medium text-brand-text-secondary">
-                  <Clock size={12} />
+                <div className="flex items-center gap-4 mb-6 text-[10px] font-black text-brand-muted uppercase">
+                  <Clock size={12} className="text-brand-danger" />
                   Requested {new Date(r.createdAt).toLocaleString()}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-4 pt-4 border-t border-brand-border">
                   <button 
                     onClick={() => handleApproveReset(r._id)}
-                    className="flex-1 btn-primary !bg-brand-warning hover:!bg-yellow-600"
+                    className="flex-1 btn-primary !bg-brand-danger hover:!bg-red-700 !py-2.5 !text-[10px] font-black uppercase tracking-widest"
                   >
                     Authorize
                   </button>
                   <button 
                     onClick={() => handleRejectReset(r._id)}
-                    className="btn-secondary text-brand-danger hover:text-brand-danger"
+                    className="flex-1 btn-secondary !py-2.5 !text-[10px] font-black uppercase tracking-widest text-brand-muted"
                   >
                     Dismiss
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))
           )}
         </div>
       </section>
 
-      <ConfirmationModal 
-        isOpen={modal.isOpen}
-        onClose={() => { setModal({ ...modal, isOpen: false }); fetchUsers(); }}
-        onConfirm={confirmRoleChange}
-        title="Escalate Privilege Logic"
-        message={`Confirming identity translation for ${modal.userEmail}. Escalating access level to system-wide "${modal.newRole.toUpperCase()}" privileges.`}
+      <UserEditModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        user={selectedUser} 
+        onUpdate={handleUpdate}
       />
     </div>
   );

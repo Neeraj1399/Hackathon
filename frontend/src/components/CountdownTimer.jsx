@@ -49,11 +49,11 @@ const CountdownTimer = ({ deadline, isMini = false }) => {
   });
 
   if (timerComponents.length === 0) {
-    return <div className="text-[10px] font-black text-brand-danger uppercase tracking-widest py-0.5 px-2 bg-brand-danger/5 rounded border border-brand-danger/10">Protocol Sunset</div>;
+    return <div className="text-[10px] font-black text-brand-danger uppercase tracking-widest py-0.5 px-2 bg-brand-danger/5 rounded border border-brand-danger/10">Hackathon Ended</div>;
   }
 
   return (
-    <div className={`flex items-center ${isMini ? 'gap-1.5' : 'gap-4'}`}>
+    <div className={`flex items-center ${isMini ? 'gap-4.5' : 'gap-4'}`}>
       {timerComponents}
     </div>
   );

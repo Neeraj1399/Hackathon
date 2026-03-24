@@ -8,7 +8,8 @@ const {
   inviteJudge,
   getJoinedHackathons,
   getGlobalStats,
-  getJudgeStats
+  getJudgeStats,
+  announceResults
 } = require('../controllers/hackathonController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -31,6 +32,7 @@ router
   .put(protect, authorize('admin'), updateHackathon)
   .delete(protect, authorize('admin'), deleteHackathon);
 
-router.post('/:id/invite-judge', protect, authorize('admin'), inviteJudge);
+router.post('/:id/invite-judge', protect, authorize('admin', 'judge'), inviteJudge);
+router.put('/:id/complete', protect, authorize('admin'), announceResults);
 
 module.exports = router;

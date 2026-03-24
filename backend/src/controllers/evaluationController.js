@@ -2,7 +2,7 @@ const Evaluation = require('../models/Evaluation');
 const Submission = require('../models/Submission');
 const Hackathon = require('../models/Hackathon');
 
-// @desc    Score a project submission
+// @desc    Score a project submission (Create or Update)
 // @route   POST /api/evaluations
 // @access  Private (Judge)
 exports.createEvaluation = async (req, res) => {
@@ -17,21 +17,55 @@ exports.createEvaluation = async (req, res) => {
 
     // Check if user is a judge for this hackathon
     const hackathon = await Hackathon.findById(submission.hackathonId);
-    if (!hackathon.judges.includes(req.user.id)) {
-      return res.status(403).json({ success: false, message: 'Not authorized to judge this hackathon' });
+    if (!hackathon.judges.some(id => id.toString() === req.user.id.toString())) {
+      return res.status(403).json({ success: false, message: 'Not authorized as a judge for this hackathon' });
     }
 
-    const evaluation = await Evaluation.create({
-      submissionId,
-      judgeId: req.user.id,
-      innovation,
-      impact,
-      technical,
-      feedback
-    });
+    // Check if hackathon is completed
+    if (hackathon.isCompleted) {
+      return res.status(400).json({ success: false, message: 'Evaluations are locked after result announcement' });
+    }
 
-    res.status(201).json({ success: true, data: evaluation });
+    console.log('--- [COMMIT REQUEST] Evaluating Submission:', submissionId, '---');
+    console.log('--- [PAYLOAD] Inn:', innovation, 'Imp:', impact, 'Tech:', technical, '---');
+    
+    const totalScore = Number(innovation) + Number(impact) + Number(technical);
+    console.log('--- [CALCULATED] TotalScore:', totalScore, '---');
+
+    // Check if evaluation already exists for this judge/submission (Upsert)
+    let evaluation = await Evaluation.findOne({ submissionId, judgeId: req.user.id });
+    console.log('--- [EXISTING CHECK] Found:', !!evaluation, '---');
+
+    if (evaluation) {
+      console.log('--- [UPDATING] Existing Record ID:', evaluation._id, '---');
+      evaluation.innovation = innovation;
+      evaluation.impact = impact;
+      evaluation.technical = technical;
+      evaluation.totalScore = totalScore;
+      evaluation.feedback = feedback;
+      await evaluation.save();
+      console.log(`--- [SUCCESS] Evaluation Updated for Sub: ${submissionId} ---`);
+    } else {
+      console.log('--- [CREATING] New Registry Entry ---');
+      evaluation = await Evaluation.create({
+        submissionId,
+        judgeId: req.user.id,
+        innovation,
+        impact,
+        technical,
+        totalScore,
+        feedback
+      });
+      console.log(`--- [SUCCESS] Evaluation Created for Sub: ${submissionId} ---`);
+    }
+    
+    // Update submission status
+    submission.status = 'reviewed';
+    await submission.save();
+
+    res.status(200).json({ success: true, data: evaluation });
   } catch (err) {
+    console.error('!!! [COMMIT ERROR] Judicial Synchronization Failed !!!', err);
     res.status(400).json({ success: false, message: err.message });
   }
 };
@@ -54,8 +88,6 @@ exports.getSubmissionEvaluations = async (req, res) => {
 exports.getLeaderboard = async (req, res) => {
   try {
     const { hackathonId } = req.params;
-
-    // Find all submissions for the hackathon
     const submissions = await Submission.find({ hackathonId }).populate('userId', 'name');
 
     const leaderboard = await Promise.all(
@@ -68,31 +100,13 @@ exports.getLeaderboard = async (req, res) => {
           ...sub.toObject(),
           averageScore: parseFloat(avgScore.toFixed(2)),
           evalCount: evaluations.length,
-          participantName: sub.userId.name
+          participantName: sub.userId?.name || 'Anonymous'
         };
       })
     );
 
     leaderboard.sort((a, b) => b.averageScore - a.averageScore);
-
-    const rankedLeaderboard = leaderboard.map((item, index) => ({
-      rank: index + 1,
-      ...item
-    }));
-
-    // Winner Emails (Only if someone asks for leaderboard and it's after deadline)
-    const hackathon = await Hackathon.findById(hackathonId);
-    if (hackathon && new Date() > hackathon.submissionDeadline) {
-      const { sendWinnerEmail } = require('../utils/emailService');
-      // Send to the top person if they have a non-zero score
-      if (rankedLeaderboard.length > 0 && rankedLeaderboard[0].averageScore > 0) {
-        // Need user email
-        const topSubmission = await Submission.findById(rankedLeaderboard[0]._id).populate('userId', 'email');
-        if (topSubmission && topSubmission.userId.email) {
-          await sendWinnerEmail(topSubmission.userId.email, hackathon.title, 1);
-        }
-      }
-    }
+    const rankedLeaderboard = leaderboard.map((item, index) => ({ rank: index + 1, ...item }));
 
     res.status(200).json({ success: true, data: rankedLeaderboard });
   } catch (err) {
@@ -100,24 +114,30 @@ exports.getLeaderboard = async (req, res) => {
   }
 };
 
-// @desc    Get evaluations for the current user's submission
+// @desc    Get current judge's evaluation for a submission
+// @route   GET /api/evaluations/judge-audit/:submissionId
+// @access  Private (Judge)
+exports.getJudgeEvaluation = async (req, res) => {
+  try {
+    console.log('!!! [REGISTRY HIT] Judge Audit Protocol Activated !!!');
+    console.log(`--- [METADATA] Sub ID: ${req.params.submissionId} | Judge: ${req.user.name} ---`);
+    const evaluation = await Evaluation.findOne({ 
+      submissionId: req.params.submissionId, 
+      judgeId: req.user.id 
+    });
+    res.status(200).json({ success: true, data: evaluation });
+  } catch (err) {
+    console.error('!!! [REGISTRY ERROR] Judicial Lookup Failed !!!', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Get evaluations for current user's submission
 // @route   GET /api/evaluations/my/:submissionId
 // @access  Private (Participant)
 exports.getMyEvaluation = async (req, res) => {
   try {
-    const { submissionId } = req.params;
-
-    // Verify submission belongs to user
-    const submission = await Submission.findById(submissionId);
-    if (!submission) {
-      return res.status(404).json({ success: false, message: 'Submission not found' });
-    }
-
-    if (submission.userId.toString() !== req.user.id.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to view these evaluations' });
-    }
-
-    const evaluations = await Evaluation.find({ submissionId }).populate('judgeId', 'name');
+    const evaluations = await Evaluation.find({ submissionId: req.params.submissionId }).populate('judgeId', 'name');
     res.status(200).json({ success: true, count: evaluations.length, data: evaluations });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

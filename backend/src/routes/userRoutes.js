@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   getUsers, 
-  getJudges,
-  updateUserRole, 
+  updateUser, 
   deleteUser,
   getResetRequests,
   approveResetRequest,
@@ -11,14 +10,13 @@ const {
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// All routes are protected and admin only
+// All routes represent administrative actions in the organizational directory
 router.use(protect);
 router.use(authorize('admin'));
 
 router.get('/', getUsers);
-router.get('/judges', getJudges);
-router.route('/:id').delete(deleteUser);
-router.put('/:id/role', updateUserRole);
+router.patch('/:id', updateUser);
+router.delete('/:id', deleteUser);
 
 // Password Reset Requests
 router.get('/reset-requests', getResetRequests);

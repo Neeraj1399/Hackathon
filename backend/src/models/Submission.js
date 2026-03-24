@@ -21,11 +21,9 @@ const submissionSchema = new mongoose.Schema({
     required: [true, 'Please add a project description']
   },
   githubLink: {
-    type: String,
-    required: [true, 'Please add a GitHub link']
+    type: String
   },
   demoLink: String,
-  techStack: String,
   submittedAt: {
     type: Date,
     default: Date.now
@@ -33,10 +31,26 @@ const submissionSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
-});
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'reviewed'],
+    default: 'pending'
+  },
+  comments: [{
+    userId: { type: mongoose.Schema.ObjectId, ref: 'User' },
+    userName: String,
+    text: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }]
+}, { timestamps: true });
 
 // Ensure one submission per user per hackathon
 submissionSchema.index({ userId: 1, hackathonId: 1 }, { unique: true });
+
+// High-frequency query indexes
+submissionSchema.index({ hackathonId: 1 });
+submissionSchema.index({ userId: 1 });
+submissionSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Submission', submissionSchema);

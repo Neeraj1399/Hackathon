@@ -3,34 +3,26 @@ const User = require('../models/User');
 const PasswordResetRequest = require('../models/PasswordResetRequest');
 const { sendResetEmail } = require('../utils/emailService');
 
-// @desc    Get all users
+// @desc    Get all users with hierarchy
 // @route   GET /api/users
 // @access  Private/Admin
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find({}).sort('-createdAt');
+    const users = await User.find({})
+      .populate('techLead', 'name email')
+      .populate('manager', 'name email')
+      .sort('-createdAt');
+      
     res.status(200).json({ success: true, count: users.length, data: users });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
-// @desc    Get all judges
-// @route   GET /api/users/judges
+// @desc    Update user (Admin)
+// @route   PATCH /api/users/:id
 // @access  Private/Admin
-exports.getJudges = async (req, res) => {
-  try {
-    const judges = await User.find({ role: 'judge' }).select('name email').sort('-createdAt');
-    res.status(200).json({ success: true, count: judges.length, data: judges });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// @desc    Update user role
-// @route   PUT /api/users/:id/role
-// @access  Private/Admin
-exports.updateUserRole = async (req, res) => {
+exports.updateUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
 
@@ -40,16 +32,29 @@ exports.updateUserRole = async (req, res) => {
 
     // Super Admin Protection
     if (user.email === 'adminhackathon@gmail.com') {
-      return res.status(403).json({ success: false, message: 'Cannot modify Super Admin role' });
+      if (req.body.systemRole && req.body.systemRole !== 'admin') {
+         return res.status(403).json({ success: false, message: 'Cannot demote the root System Administrator.' });
+      }
+      // Force systemRole to remain 'admin' even if they try to bypass frontend
+      req.body.systemRole = 'admin';
     }
 
-    user.role = req.body.role;
-    await user.save();
+    const { name, email, systemRole } = req.body;
 
-    res.status(200).json({ success: true, data: user });
+    const fieldsToUpdate = {};
+    if (name !== undefined) fieldsToUpdate.name = name;
+    if (email !== undefined) fieldsToUpdate.email = email;
+    if (systemRole !== undefined) fieldsToUpdate.systemRole = systemRole;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: fieldsToUpdate },
+      { new: true, runValidators: true }
+    ).populate('techLead', 'name email').populate('manager', 'name email');
+
+    res.status(200).json({ success: true, data: updatedUser });
   } catch (err) {
-    console.error('Update Role Error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
@@ -64,16 +69,14 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Super Admin Protection
     if (user.email === 'adminhackathon@gmail.com') {
       return res.status(403).json({ success: false, message: 'Cannot delete Super Admin' });
     }
 
     await user.deleteOne();
-
     res.status(200).json({ success: true, data: {} });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 

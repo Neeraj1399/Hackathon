@@ -48,7 +48,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 
               </button>
               <button 
                 onClick={onConfirm} 
-                className={`flex-1 py-3.5 !rounded-2xl font-bold text-sm text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
+                className={`flex-1 py-3.5 !rounded-2xl font-bold text-sm text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-4 ${
                   isDestructive 
                   ? 'bg-brand-danger hover:bg-brand-danger/90 shadow-brand-danger/20' 
                   : 'bg-brand-primary hover:bg-brand-primary/90 shadow-brand-primary/20'
@@ -59,7 +59,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 
             </div>
           </div>
           
-          <div className="bg-gray-50/50 py-4 px-8 border-t border-brand-border flex items-center gap-3">
+          <div className="bg-gray-50/50 py-4 px-8 border-t border-brand-border flex items-center gap-4">
              <div className="w-1.5 h-1.5 rounded-full bg-brand-secondary/30 animate-pulse" />
              <span className="text-[10px] font-black text-brand-secondary/40 uppercase tracking-widest italic">
                 Authorized Operation Required

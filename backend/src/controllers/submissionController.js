@@ -78,7 +78,7 @@ exports.updateSubmission = async (req, res) => {
 // @access  Private (Participant)
 exports.getMySubmissions = async (req, res) => {
   try {
-    const submissions = await Submission.find({ userId: req.user.id }).populate('hackathonId', 'title');
+    const submissions = await Submission.find({ userId: req.user.id }).populate('hackathonId', 'title isCompleted').lean();
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -90,7 +90,7 @@ exports.getMySubmissions = async (req, res) => {
 // @access  Private (Admin/Judge)
 exports.getHackathonSubmissions = async (req, res) => {
   try {
-    const submissions = await Submission.find({ hackathonId: req.params.hackathonId }).populate('userId', 'name email');
+    const submissions = await Submission.find({ hackathonId: req.params.hackathonId }).populate('userId', 'name email').lean();
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -98,15 +98,94 @@ exports.getHackathonSubmissions = async (req, res) => {
 };
 // @desc    Get all submissions (for Admin global activity feed)
 // @route   GET /api/submissions
-// @access  Private (Admin)
+// @access  Private
 exports.getAllSubmissions = async (req, res) => {
   try {
-    const submissions = await Submission.find()
+    const { search } = req.query;
+    let query = {};
+
+    const submissions = await Submission.find(query)
+      .populate('userId', 'name email')
+      .populate('hackathonId', 'title isCompleted')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Client-side search filter (search by project title or participant name)
+    let results = submissions;
+    if (search) {
+      const s = search.toLowerCase();
+      results = submissions.filter(sub =>
+        sub.projectTitle?.toLowerCase().includes(s) ||
+        sub.userId?.name?.toLowerCase().includes(s) ||
+        sub.hackathonId?.title?.toLowerCase().includes(s)
+      );
+    }
+
+    res.status(200).json({ success: true, count: results.length, data: results });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+// @desc    Get single submission
+// @route   GET /api/submissions/:id
+// @access  Private (Admin/Judge/Owner)
+exports.getSubmission = async (req, res) => {
+  try {
+    const submission = await Submission.findById(req.params.id)
+      .populate('userId', 'name email role position')
+      .populate('hackathonId', 'title description submissionDeadline')
+      .lean();
+    
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    res.status(200).json({ success: true, data: submission });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+// @desc    Get all submissions assigned to a judge
+// @route   GET /api/submissions/assigned
+// @access  Private (Judge)
+exports.getAssignedSubmissions = async (req, res) => {
+  try {
+    const judgeId = req.user.id;
+    // Find hackathons where user is a judge
+    const assignedHackathons = await Hackathon.find({ judges: judgeId });
+    const hackathonIds = assignedHackathons.map(h => h._id);
+
+    const submissions = await Submission.find({ hackathonId: { $in: hackathonIds } })
       .populate('userId', 'name email')
       .populate('hackathonId', 'title')
-      .sort({ createdAt: -1 })
-      .limit(10);
+      .lean();
+
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+exports.addComment = async (req, res) => {
+  try {
+    const submission = await Submission.findById(req.params.id);
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Comment text is required' });
+    }
+
+    submission.comments.push({
+      userId: req.user.id,
+      userName: req.user.name,
+      text
+    });
+
+    await submission.save();
+    res.status(200).json({ success: true, data: submission.comments });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

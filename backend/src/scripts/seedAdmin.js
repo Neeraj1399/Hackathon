@@ -22,7 +22,8 @@ const seedAdmin = async () => {
       name: 'Super Admin',
       email: adminEmail,
       password: 'Admin@123',
-      role: 'admin'
+      role: 'Super Admin',
+      systemRole: 'admin'
     });
 
     await admin.save();

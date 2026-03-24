@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import API from '../api/axiosInstance';
 import { 
   Clock, 
@@ -10,223 +11,229 @@ import {
   Globe, 
   Info, 
   Trophy,
-  Mail,
-  Search,
-  ExternalLink,
   Zap,
   Layout,
-  Users,
-  ClipboardCheck
+  Layers,
+  FileCheck,
+  ChevronRight,
+  Sparkles,
+  Edit,
+  User,
+  ShieldCheck,
+  CalendarDays
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { CircularLoading } from '../components/Skeleton';
 
 const SubmitProject = () => {
   const { hackathonId } = useParams();
   const navigate = useNavigate();
   const [hackathon, setHackathon] = useState(null);
+  const [existingSubmission, setExistingSubmission] = useState(null);
   const [formData, setFormData] = useState({ 
     projectTitle: '', 
     description: '', 
-    techStack: '',
     githubLink: '', 
     demoLink: '' 
   });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [timeLeft, setTimeLeft] = useState('');
+  const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, expired: false });
 
   useEffect(() => {
-    const fetchHackathon = async () => {
+    const fetchData = async () => {
       try {
-        const res = await API.get(`hackathons/${hackathonId}`);
-        setHackathon(res.data.data);
-        const deadline = new Date(res.data.data.submissionDeadline).getTime();
+        const [hackRes, mySubsRes] = await Promise.all([
+          API.get(`hackathons/${hackathonId}`),
+          API.get('submissions/my')
+        ]);
+        
+        const hackData = hackRes.data.data;
+        setHackathon(hackData);
+        
+        const sub = mySubsRes.data.data.find(s => s.hackathonId?._id === hackathonId || s.hackathonId === hackathonId);
+        if (sub) {
+          setExistingSubmission(sub);
+          setFormData({
+            projectTitle: sub.projectTitle,
+            description: sub.description || sub.projectDescription,
+            githubLink: sub.githubLink,
+            demoLink: sub.demoLink || ''
+          });
+        }
+
+        const deadline = new Date(hackData.submissionDeadline).getTime();
         const interval = setInterval(() => {
           const now = Date.now();
           const distance = deadline - now;
           if (distance < 0) { 
             clearInterval(interval); 
-            setTimeLeft('EXPIRED'); 
+            setTimeLeft({ d: 0, h: 0, m: 0, expired: true }); 
           } else {
             const d = Math.floor(distance / 86400000);
             const h = Math.floor((distance % 86400000) / 3600000);
             const m = Math.floor((distance % 3600000) / 60000);
-            setTimeLeft(`${d}d ${h}h ${m}m remaining`);
+            setTimeLeft({ d, h, m, expired: false });
           }
         }, 1000);
         return () => clearInterval(interval);
       } catch (err) {
-        setMessage({ type: 'error', text: 'Registry connection disrupted.' });
+        console.error(err);
       } finally { setLoading(false); }
     };
-    fetchHackathon();
+    fetchData();
   }, [hackathonId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage({ type: '', text: '' });
+    
     try {
-      await API.post('submissions', { ...formData, hackathonId });
-      setMessage({ type: 'success', text: 'Project successfully submitted.' });
+      if (existingSubmission) {
+        await API.put(`submissions/${existingSubmission._id}`, { ...formData });
+        toast.success('Project successfully updated.', { icon: '✨' });
+      } else {
+        await API.post('submissions', { ...formData, hackathonId });
+        toast.success('Project successfully submitted.', { icon: '🚀' });
+      }
       setTimeout(() => navigate('/dashboard'), 1500);
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Submission failed.' });
+      toast.error(err.response?.data?.message || 'Transmission failed.');
     } finally { setSubmitting(false); }
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[400px]">
-      <div className="w-8 h-8 border-4 border-brand-primary/10 border-t-brand-primary rounded-full animate-spin mb-4" />
-      <p className="text-sm font-medium text-brand-text-secondary">Connecting to submission portal...</p>
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <CircularLoading size="lg" label="Synchronizing Registry..." />
     </div>
   );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20">
-      <header>
+    <div className="max-w-6xl mx-auto px-4 pb-24">
+      {/* Universal Navigation */}
+      <nav className="py-6">
         <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 text-xs font-bold text-brand-text-secondary hover:text-brand-primary uppercase tracking-widest mb-6 transition-colors"
+          onClick={() => navigate('/dashboard')} 
+          className="group flex items-center gap-4 text-[10px] font-black text-brand-muted hover:text-brand-primary uppercase tracking-[0.2em] transition-all"
         >
-          <ArrowLeft size={14} /> Back to Dashboard
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Participant Dashboard
         </button>
-        <h1 className="text-xl font-bold text-brand-text-primary">Project Submission</h1>
-        <p className="text-sm text-brand-text-secondary mt-1">Submit your solution for the {hackathon?.title} event.</p>
-      </header>
+      </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Track Info */}
-        <div className="space-y-6">
-          <div className="card-enterprise !p-5 bg-blue-50/30 border-blue-100">
-             <div className="flex items-center gap-2 text-brand-primary font-bold text-xs uppercase tracking-wider mb-3">
-                <Clock size={14} /> Deadline Info
-             </div>
-             <p className="text-xl font-black text-brand-text-primary">{timeLeft}</p>
-             <p className="text-[11px] text-brand-text-secondary mt-1">
-                Closes: {new Date(hackathon?.submissionDeadline).toLocaleString()}
-             </p>
-          </div>
+      {/* Unified Submission Workspace */}
+      <div className="bg-white border border-brand-border rounded-xl shadow-sm overflow-hidden relative">
+         {/* Top Integrity Header */}
+         <div className="p-6 sm:p-10 border-b border-brand-border bg-slate-50/30">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+               <div className="flex flex-col gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-black text-brand-dark tracking-tight">
+                     {existingSubmission ? 'Update Submission' : 'Project Submission'}
+                  </h1>
+                  <p className="text-sm font-bold text-brand-primary uppercase tracking-widest">{hackathon?.title}</p>
+               </div>
+               
+               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8">
+                  <div className="text-left md:text-right">
+                     <p className="text-[10px] font-black text-brand-muted uppercase tracking-widest mb-1">Deadline </p>
+                     <p className="text-sm font-black text-brand-dark leading-none">
+                        {new Date(hackathon?.submissionDeadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(hackathon?.submissionDeadline).toLocaleDateString('en-GB')}
+                     </p>
+                  </div>
+                  <div className={`py-3 px-4 rounded-xl border flex items-center gap-3 ${timeLeft.expired ? 'bg-red-50 text-red-600 border-red-100' : 'bg-brand-primary/5 text-brand-primary border-brand-primary/10'}`}>
+                     <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest leading-none mb-1">Time Remaining</span>
+                        <span className="text-sm font-black tabular-nums leading-none tracking-tight">
+                           {timeLeft.d}D {timeLeft.h}H {timeLeft.m}M
+                        </span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
 
-          <div className="card-enterprise !p-5">
-             <h3 className="text-xs font-bold text-brand-text-primary uppercase tracking-wider mb-3">Hackathon Objective</h3>
-             <p className="text-xs text-brand-text-secondary leading-relaxed line-clamp-4">
-                {hackathon?.description}
-             </p>
-          </div>
-
-          <div className="flex items-start gap-3 p-4 bg-brand-section rounded-lg border border-brand-border">
-             <Info size={16} className="text-brand-primary mt-0.5 shrink-0" />
-             <p className="text-[11px] text-brand-text-secondary leading-relaxed">
-                Ensure project repository is public or properly shared with the review board.
-             </p>
-          </div>
-        </div>
-
-        {/* Submission Form */}
-        <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="bg-white border border-brand-border rounded-lg p-8 shadow-sm space-y-6">
-            {message.text && (
-              <div className={`p-4 rounded-md flex items-center gap-2 text-sm font-medium ${
-                message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-brand-danger border border-red-100'
-              }`}>
-                {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                {message.text}
-              </div>
-            )}
-
-            {/* Project Concept (Idea Phase) */}
+         <form onSubmit={handleSubmit} className="p-6 sm:p-10 space-y-8 min-h-[400px]">
             <div className="space-y-6">
-              <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-widest border-l-2 border-brand-primary pl-3">
-                Project Concept
-              </h3>
-              
-              <div className="form-group">
-                <label className="label-enterprise">Project Title</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="input-enterprise" 
-                  placeholder="e.g. Nexus Framework" 
-                  value={formData.projectTitle} 
-                  onChange={(e) => setFormData({ ...formData, projectTitle: e.target.value })} 
-                />
-              </div>
+               <div className="space-y-4 group">
+                  <label className="text-[11px] font-black text-brand-dark uppercase tracking-widest group-focus-within:text-brand-primary transition-colors">
+                     Project Title
+                  </label>
+                  <input 
+                    type="text" 
+                    required 
+                    disabled={timeLeft.expired}
+                    className="w-full bg-brand-bg/50 border border-brand-border rounded-2xl py-5 px-6 text-sm font-black text-brand-dark transition-all outline-none focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/5 shadow-inner" 
+                    placeholder="Project Title (e.g. Smart App)" 
+                    value={formData.projectTitle} 
+                    onChange={(e) => setFormData({ ...formData, projectTitle: e.target.value })} 
+                  />
+               </div>
 
-              <div className="form-group">
-                <label className="label-enterprise">Description & Objective</label>
-                <textarea 
-                  required 
-                  rows={4}
-                  className="input-enterprise resize-none" 
-                  placeholder="What problem does this solve and what is the core value proposition?" 
-                  value={formData.description} 
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
-                />
-              </div>
+               <div className="space-y-4 group">
+                  <label className="text-[11px] font-black text-brand-dark uppercase tracking-widest group-focus-within:text-brand-primary transition-colors">
+                     Description
+                  </label>
+                  <textarea 
+                    required 
+                    disabled={timeLeft.expired}
+                    rows={6}
+                    className="w-full bg-brand-bg/50 border border-brand-border rounded-3xl py-5 px-6 text-sm font-black text-brand-dark transition-all outline-none focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/5 resize-none shadow-inner" 
+                    placeholder="Define the problem landscape and technical solution..." 
+                    value={formData.description} 
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+                  />
+               </div>
 
-              <div className="form-group">
-                <label className="label-enterprise">Tech Stack</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="input-enterprise" 
-                  placeholder="e.g. React, Node.js, MongoDB, Tailwind CSS" 
-                  value={formData.techStack} 
-                  onChange={(e) => setFormData({ ...formData, techStack: e.target.value })} 
-                />
-              </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4 group">
+                     <label className="text-[10px] font-black text-brand-muted group-focus-within:text-brand-primary uppercase tracking-widest transition-colors">
+                        Github Link
+                     </label>
+                     <input 
+                       type="url" 
+                       disabled={timeLeft.expired}
+                       className="w-full bg-brand-bg/50 border border-brand-border rounded-2xl py-4 px-5 text-[11px] font-black text-brand-dark transition-all outline-none focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/5 shadow-inner" 
+                       placeholder="https://github.com/org/repo (optional)" 
+                       value={formData.githubLink} 
+                       onChange={(e) => setFormData({ ...formData, githubLink: e.target.value })} 
+                     />
+                  </div>
+                  
+                  <div className="space-y-4 group">
+                     <label className="text-[10px] font-black text-brand-muted group-focus-within:text-brand-primary uppercase tracking-widest transition-colors">
+                        Live Link
+                     </label>
+                     <input 
+                       type="url" 
+                       disabled={timeLeft.expired}
+                       className="w-full bg-brand-bg/50 border border-brand-border rounded-2xl py-4 px-5 text-[11px] font-black text-brand-dark transition-all outline-none focus:bg-white focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/5 shadow-inner" 
+                       placeholder="https://nexus-demo.app" 
+                       value={formData.demoLink} 
+                       onChange={(e) => setFormData({ ...formData, demoLink: e.target.value })} 
+                     />
+                  </div>
+               </div>
             </div>
 
-            {/* Final Deliverables (Final Phase) */}
-            <div className="space-y-6 pt-6 border-t border-brand-border">
-              <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-widest border-l-2 border-brand-primary pl-3">
-                Final Deliverables
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="form-group">
-                  <label className="label-enterprise">GitHub Repository URL</label>
-                  <div className="relative">
-                    <Github className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={14} />
-                    <input 
-                      type="url" 
-                      required 
-                      className="input-enterprise pl-9" 
-                      placeholder="https://github.com/..." 
-                      value={formData.githubLink} 
-                      onChange={(e) => setFormData({ ...formData, githubLink: e.target.value })} 
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="label-enterprise">Demo URL (Optional)</label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={14} />
-                    <input 
-                      type="url" 
-                      className="input-enterprise pl-9" 
-                      placeholder="https://..." 
-                      value={formData.demoLink} 
-                      onChange={(e) => setFormData({ ...formData, demoLink: e.target.value })} 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-
-            <div className="pt-4">
-              <button 
-                type="submit" 
-                disabled={submitting || timeLeft.includes('EXPIRED')} 
-                className="w-full btn-primary !py-3 flex justify-center items-center gap-2 font-bold uppercase tracking-widest text-xs"
+            <div className="pt-10 flex justify-center">
+               <button 
+                type="submit"
+                disabled={submitting || timeLeft.expired} 
+                className={`h-14 px-12 rounded-xl flex items-center gap-3 font-black uppercase tracking-[0.2em] text-[10px] transition-all duration-300 w-full sm:w-auto min-w-[200px] justify-center ${
+                  (submitting || timeLeft.expired) 
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                  : 'bg-brand-primary text-white hover:bg-brand-primary/95 shadow-lg shadow-brand-primary/20'
+                }`}
               >
-                {submitting ? 'Transmitting...' : timeLeft.includes('EXPIRED') ? 'Submission Window Closed' : 'Submit Project'}
+                {submitting ? (
+                   <CircularLoading size="sm" label="" />
+                ) : timeLeft.expired ? (
+                   <span>Registry Locked</span>
+                ) : (
+                   <span>{existingSubmission ? 'Save Changes' : 'Submit Project'}</span>
+                )}
               </button>
             </div>
-          </form>
-        </div>
+         </form>
       </div>
     </div>
   );

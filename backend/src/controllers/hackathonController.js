@@ -44,7 +44,7 @@ exports.getJudgeStats = async (req, res) => {
 exports.getGlobalStats = async (req, res) => {
   try {
     const [totalParticipants, totalSubmissions, activeTracks, evaluatedCount] = await Promise.all([
-      User.countDocuments({ role: 'participant' }),
+      User.countDocuments({ systemRole: 'participant' }),
       Submission.countDocuments(),
       Hackathon.countDocuments({ isActive: true }),
       Evaluation.distinct('submissionId').then(ids => ids.length)
@@ -71,7 +71,7 @@ exports.getGlobalStats = async (req, res) => {
 // @access  Public
 exports.getHackathons = async (req, res) => {
   try {
-    const hackathons = await Hackathon.find({ isActive: true }).populate('judges', 'name email');
+    const hackathons = await Hackathon.find({ isActive: true }).populate('judges', 'name email').lean();
     res.status(200).json({ success: true, count: hackathons.length, data: hackathons });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -83,7 +83,7 @@ exports.getHackathons = async (req, res) => {
 // @access  Public
 exports.getHackathon = async (req, res) => {
   try {
-    const hackathon = await Hackathon.findById(req.params.id);
+    const hackathon = await Hackathon.findById(req.params.id).lean();
     if (!hackathon) {
       return res.status(404).json({ success: false, message: 'Hackathon not found' });
     }
@@ -130,14 +130,20 @@ exports.createHackathon = async (req, res) => {
 // @access  Private (Admin)
 exports.updateHackathon = async (req, res) => {
   try {
-    let hackathon = await Hackathon.findById(req.params.id);
+    const hackathon = await Hackathon.findById(req.params.id);
     if (!hackathon) {
       return res.status(404).json({ success: false, message: 'Hackathon not found' });
     }
-    hackathon = await Hackathon.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
+    
+    // Whitelist updatable fields
+    const fields = ['title', 'description', 'rules', 'startDate', 'endDate', 'submissionDeadline', 'isActive', 'isCompleted'];
+    fields.forEach(f => {
+      if (req.body[f] !== undefined) {
+        hackathon[f] = req.body[f];
+      }
     });
+
+    await hackathon.save();
     res.status(200).json({ success: true, data: hackathon });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -173,7 +179,7 @@ exports.inviteJudge = async (req, res) => {
     }
 
     const userToInvite = await User.findById(userId);
-    if (!userToInvite || userToInvite.role !== 'judge') {
+    if (!userToInvite || userToInvite.systemRole !== 'judge') {
       return res.status(400).json({ success: false, message: 'Invalid judge user' });
     }
 
@@ -202,6 +208,43 @@ exports.getJoinedHackathons = async (req, res) => {
   try {
     const hackathons = await Hackathon.find({ judges: req.user.id });
     res.status(200).json({ success: true, count: hackathons.length, data: hackathons });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+// @desc    Announce results (mark hackathon as complete)
+// @route   PUT /api/hackathons/:id/complete
+// @access  Private (Admin)
+exports.announceResults = async (req, res) => {
+  try {
+    const hackathon = await Hackathon.findById(req.params.id);
+    if (!hackathon) {
+      return res.status(404).json({ success: false, message: 'Hackathon not found' });
+    }
+
+    // Check for unevaluated submissions
+    const force = req.query.force === 'true';
+    const submissions = await Submission.find({ hackathonId: hackathon._id });
+    const evaluatedSubIds = await Evaluation.distinct('submissionId', {
+      submissionId: { $in: submissions.map(s => s._id) }
+    });
+    const unevaluated = submissions.filter(
+      s => !evaluatedSubIds.some(eId => eId.toString() === s._id.toString())
+    );
+
+    if (unevaluated.length > 0 && !force) {
+      return res.status(200).json({
+        success: false,
+        warning: true,
+        message: `${unevaluated.length} submission(s) have not been evaluated yet.`,
+        unevaluatedProjects: unevaluated.map(s => s.projectTitle)
+      });
+    }
+
+    hackathon.isCompleted = true;
+    await hackathon.save();
+
+    res.status(200).json({ success: true, message: 'Results announced successfully', data: hackathon });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

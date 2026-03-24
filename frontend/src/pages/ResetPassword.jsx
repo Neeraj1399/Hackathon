@@ -30,8 +30,8 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
+      <div className="w-full max-w-sm space-y-4">
+        <div className="text-center space-y-4">
           <div className="w-12 h-12 bg-brand-primary text-white rounded-lg flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-brand-primary/20">
             A
           </div>
@@ -51,15 +51,15 @@ const ResetPassword = () => {
           )}
           
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-md text-brand-danger text-sm font-medium flex items-center gap-2 mb-6">
+            <div className="p-4 bg-red-50 border border-red-100 rounded-md text-brand-danger text-sm font-medium flex items-center gap-4 mb-6">
                <AlertCircle size={16} /> {error}
             </div>
           )}
 
           {!message && (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="form-group">
-                <label className="label-enterprise">New Security Key</label>
+                <label className="label-enterprise">New Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" size={16} />
                   <input 
@@ -93,7 +93,7 @@ const ResetPassword = () => {
           )}
 
           <div className="mt-8 pt-8 border-t border-brand-border text-center">
-            <Link to="/login" className="inline-flex items-center gap-2 text-brand-text-primary font-bold hover:text-brand-primary transition-colors text-xs uppercase tracking-wider">
+            <Link to="/login" className="inline-flex items-center gap-4 text-brand-text-primary font-bold hover:text-brand-primary transition-colors text-xs uppercase tracking-wider">
                <ArrowLeft size={14} /> Back to Sign In
             </Link>
           </div>

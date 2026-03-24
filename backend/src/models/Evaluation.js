@@ -35,7 +35,7 @@ const evaluationSchema = new mongoose.Schema({
   },
   feedback: {
     type: String,
-    required: [true, 'Please add feedback']
+    default: ''
   },
   createdAt: {
     type: Date,
@@ -43,13 +43,13 @@ const evaluationSchema = new mongoose.Schema({
   }
 });
 
-// Calculate total score before saving
-evaluationSchema.pre('save', function(next) {
-  this.totalScore = this.innovation + this.impact + this.technical;
-  next();
-});
+// Scored computed in controller for synchronization integrity
 
 // Ensure one judge can evaluate a submission only once
 evaluationSchema.index({ submissionId: 1, judgeId: 1 }, { unique: true });
+
+// High-frequency query indexes
+evaluationSchema.index({ judgeId: 1 });
+evaluationSchema.index({ submissionId: 1 });
 
 module.exports = mongoose.model('Evaluation', evaluationSchema);

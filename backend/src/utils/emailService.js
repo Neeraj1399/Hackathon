@@ -181,11 +181,34 @@ const sendThankYouEmail = async (toEmail, hackathonTitle, role) => {
   await transporter.sendMail(mailOptions);
 };
 
+/**
+ * Send a welcome email indicating successful registration.
+ */
+const sendWelcomeEmail = async (toEmail, userName, systemRole) => {
+  const content = `
+    <p style="color:${BRAND_SECONDARY}; font-size:15px; line-height:1.7; text-align:center; margin-bottom:32px;">
+      Welcome to the network, <strong style="color:${BRAND_DARK};">${userName}</strong>. Your account has been provisioned with <strong style="color:${BRAND_PRIMARY};">${systemRole.toUpperCase()}</strong> authority.
+    </p>
+    <div style="text-align:center;">
+      <a href="http://localhost:5173/login" style="display:inline-block; background-color:${BRAND_PRIMARY}; color:#ffffff; font-weight:700; padding:16px 40px; border-radius:14px; text-decoration:none; font-size:14px;">Establish Connection</a>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"Athiva Security" <${process.env.SMTP_USER}>`,
+    to: toEmail,
+    subject: `Identity Provisioned: ${systemRole.toUpperCase()} Level`,
+    html: getBaseTemplate(content, 'Clearance Authorized')
+  };
+  await transporter.sendMail(mailOptions);
+};
+
 module.exports = { 
   sendResetEmail, 
   sendJudgeInviteEmail, 
   sendHackathonStartEmail, 
   sendDeadlineAlertEmail, 
   sendWinnerEmail, 
-  sendThankYouEmail 
+  sendThankYouEmail,
+  sendWelcomeEmail
 };

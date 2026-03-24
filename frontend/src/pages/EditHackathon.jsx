@@ -1,7 +1,42 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import API from '../api/axiosInstance';
-import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle, Calendar, Clock } from 'lucide-react';
+
+const DateTimeInput = ({ value, onChange, className }) => {
+  const dateStr = value ? value.split('T')[0] : '';
+  const timeStr = value && value.includes('T') ? value.split('T')[1].substring(0,5) : ''; // Handle HH:MM:ss
+
+  return (
+    <div className={`flex items-center bg-white border border-brand-border rounded-xl px-[4%] py-[0.625rem] transition-all focus-within:border-brand-primary focus-within:ring-4 focus-within:ring-brand-primary/5 shadow-inner ${className}`}>
+      <div className="flex items-center gap-[4%] w-[60%] border-r border-brand-border pr-[3%]">
+        <Calendar size={14} className="text-brand-secondary shrink-0" />
+        <input 
+          type="date" 
+          className="bg-transparent outline-none w-full text-xs font-black text-brand-dark" 
+          value={dateStr}
+          onChange={(e) => {
+            const newDate = e.target.value;
+            onChange(newDate ? `${newDate}T${timeStr || '12:00'}` : '');
+          }}
+        />
+      </div>
+      <div className="flex items-center gap-[4%] w-[40%] pl-[3%]">
+        <Clock size={14} className="text-brand-secondary shrink-0" />
+        <input 
+          type="time" 
+          className="bg-transparent outline-none w-full text-xs font-black text-brand-dark" 
+          value={timeStr}
+          onChange={(e) => {
+            const newTime = e.target.value;
+            onChange(dateStr ? `${dateStr}T${newTime}` : value);
+          }}
+        />
+      </div>
+    </div>
+  );
+};
 
 const EditHackathon = () => {
   const { id } = useParams();
@@ -16,14 +51,18 @@ const EditHackathon = () => {
   });
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchHackathon = async () => {
       try {
         const res = await API.get(`hackathons/${id}`);
         const data = res.data.data;
-        const formatForInput = (date) => new Date(date).toISOString().slice(0, 16);
+        const formatForInput = (date) => {
+          if (!date) return '';
+          const d = new Date(date);
+          const offset = d.getTimezoneOffset() * 60000;
+          return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+        };
         setFormData({
           title: data.title,
           description: data.description,
@@ -33,7 +72,7 @@ const EditHackathon = () => {
           submissionDeadline: formatForInput(data.submissionDeadline),
         });
       } catch (err) {
-        setError('Failed to synchronize with event registry.');
+        toast.error('Failed to synchronize with event registry.');
       } finally {
         setLoading(false);
       }
@@ -44,12 +83,12 @@ const EditHackathon = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUpdating(true);
-    setError('');
     try {
       await API.put(`hackathons/${id}`, formData);
+      toast.success('Event registry updated successfully.');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registry update failed.');
+      toast.error(err.response?.data?.message || 'Registry update failed.');
     } finally { setUpdating(false); }
   };
 
@@ -61,11 +100,11 @@ const EditHackathon = () => {
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-20">
+    <div className="max-w-2xl mx-auto space-y-4 pb-20">
       <header>
         <button 
           onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 text-xs font-bold text-brand-text-secondary hover:text-brand-primary uppercase tracking-widest mb-6 transition-colors"
+          className="flex items-center gap-4 text-xs font-bold text-brand-text-secondary hover:text-brand-primary uppercase tracking-widest mb-6 transition-colors"
         >
           <ArrowLeft size={14} /> Back to Dashboard
         </button>
@@ -73,13 +112,7 @@ const EditHackathon = () => {
         <p className="text-sm text-brand-text-secondary mt-1">Update the rules, timeline, or objectives for this event.</p>
       </header>
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-100 rounded-md text-brand-danger text-sm font-medium flex items-center gap-2">
-           <AlertCircle size={16} /> {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="bg-white border border-brand-border rounded-lg p-8 shadow-sm space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white border border-brand-border rounded-lg p-8 shadow-sm space-y-4">
         <div className="form-group">
           <label className="label-enterprise">Hackathon Title</label>
           <input 
@@ -113,37 +146,29 @@ const EditHackathon = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-group">
-            <label className="label-enterprise">Start Date</label>
-            <input 
-              type="datetime-local" 
-              required 
-              className="input-enterprise" 
+            <label className="label-enterprise">Start Date & Time</label>
+            <DateTimeInput 
               value={formData.startDate} 
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} 
+              onChange={(val) => setFormData({ ...formData, startDate: val })} 
             />
           </div>
           <div className="form-group">
-            <label className="label-enterprise">End Date</label>
-            <input 
-              type="datetime-local" 
-              required 
-              className="input-enterprise" 
-              value={formData.endDate} 
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} 
+            <label className="label-enterprise">End Date & Time</label>
+            <DateTimeInput 
+               value={formData.endDate} 
+               onChange={(val) => setFormData({ ...formData, endDate: val })} 
             />
           </div>
         </div>
 
         <div className="form-group border-t border-brand-border pt-6">
           <label className="label-enterprise text-brand-primary">Submission Deadline</label>
-          <input 
-            type="datetime-local" 
-            required 
-            className="input-enterprise border-brand-primary/20 focus:border-brand-primary" 
-            value={formData.submissionDeadline} 
-            onChange={(e) => setFormData({ ...formData, submissionDeadline: e.target.value })} 
+          <DateTimeInput 
+             className="border-brand-primary/20"
+             value={formData.submissionDeadline} 
+             onChange={(val) => setFormData({ ...formData, submissionDeadline: val })} 
           />
         </div>
 
@@ -151,7 +176,7 @@ const EditHackathon = () => {
           <button 
             type="submit" 
             disabled={updating} 
-            className="w-full btn-primary !py-3 flex justify-center items-center gap-2 font-bold uppercase tracking-widest text-xs"
+            className="w-full btn-primary !py-3 flex justify-center items-center gap-4 font-bold uppercase tracking-widest text-xs"
           >
             {updating ? 'Updating...' : <><Save size={16} /> Save Changes</>}
           </button>

@@ -18,7 +18,23 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'participant', 'judge'],
+    default: 'Employee'
+  },
+  position: {
+    type: String,
+    default: 'Engineer'
+  },
+  techLead: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
+  manager: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
+  systemRole: {
+    type: String,
+    enum: ['participant', 'judge', 'admin'],
     default: 'participant'
   },
   password: {
@@ -28,11 +44,9 @@ const userSchema = new mongoose.Schema({
     select: false
   },
   resetPasswordToken: String,
-  resetPasswordExpire: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  resetPasswordExpire: Date
+}, {
+  timestamps: true
 });
 
 // Encrypt password using bcrypt

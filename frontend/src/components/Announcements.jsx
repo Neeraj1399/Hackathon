@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import API from '../api/axiosInstance';
 import { Megaphone, Trash2, Plus, X, Bell, Calendar, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,33 +31,54 @@ const Announcements = ({ user }) => {
       await API.post('announcements', newAnnouncement);
       setNewAnnouncement({ title: '', message: '' });
       setShowForm(false);
+      toast.success('Broadcast successfully deployed to the registry.', { icon: '📣' });
       fetchAnnouncements();
     } catch (err) {
-      alert('Registry broadcast failed.');
+      toast.error('Registry broadcast failed.');
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Strike this announcement from the registry?')) {
-      try {
-        await API.delete(`announcements/${id}`);
-        fetchAnnouncements();
-      } catch (err) {
-        alert('Deprovisioning failed.');
-      }
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-4 p-1 text-sm font-bold text-brand-dark">
+        <p>Strike this announcement from the registry?</p>
+        <div className="flex justify-end gap-4 mt-2">
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-black text-brand-muted hover:bg-slate-100 rounded-md transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await API.delete(`announcements/${id}`);
+                toast.success('Announcement deleted.');
+                fetchAnnouncements();
+              } catch (err) {
+                toast.error('Deletion failed.');
+              }
+            }} 
+            className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-black bg-brand-danger text-white hover:bg-red-700 rounded-md transition-all shadow-sm"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '300px' } });
   };
 
   return (
     <section className="mb-12">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-brand-border">
-        <h2 className="text-xl font-bold text-brand-dark flex items-center gap-3">
+        <h2 className="text-xl font-bold text-brand-dark flex items-center gap-4">
           <Bell className="text-brand-primary" size={20} /> Corporate Broadcasts
         </h2>
-        {user?.role === 'admin' && (
+        {user?.systemRole === 'admin' && (
           <button
             onClick={() => setShowForm(!showForm)}
-            className={`btn-primary !py-1.5 !px-4 !text-xs flex items-center gap-2 transition-all ${showForm ? '!bg-brand-danger shadow-brand-danger/20' : ''}`}
+            className={`btn-primary !py-1.5 !px-4 !text-xs flex items-center gap-4 transition-all ${showForm ? '!bg-brand-danger shadow-brand-danger/20' : ''}`}
           >
             {showForm ? <><X size={14} /> Close</> : <><Plus size={14} /> New Entry</>}
           </button>
@@ -113,7 +135,7 @@ const Announcements = ({ user }) => {
            <p className="text-brand-secondary font-medium italic text-sm text-brand-muted/50">No active broadcasts in the current cycle.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {announcements.map((a) => (
             <motion.div 
               key={a._id} 
@@ -122,13 +144,13 @@ const Announcements = ({ user }) => {
               className="card-corp !p-6 relative group border-brand-border hover:border-brand-primary/20"
             >
               <div className="flex justify-between items-start mb-4">
-                 <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-4">
                     <div className="w-8 h-8 bg-brand-primary/10 rounded-lg flex items-center justify-center text-brand-primary">
                        <Bell size={16} />
                     </div>
                     <h3 className="text-sm font-black text-brand-dark uppercase tracking-tight line-clamp-1">{a.title}</h3>
                  </div>
-                {user?.role === 'admin' && (
+                {user?.systemRole === 'admin' && (
                   <button 
                     onClick={() => handleDelete(a._id)} 
                     className="p-2 text-brand-muted hover:text-brand-danger transition-colors bg-brand-danger/5 rounded-lg border border-transparent hover:border-brand-danger/20"
@@ -141,8 +163,8 @@ const Announcements = ({ user }) => {
                 "{a.message}"
               </p>
               <div className="flex items-center gap-4 pt-4 border-t border-brand-border/60 text-[9px] font-black text-brand-secondary/40 uppercase tracking-[0.2em]">
-                 <span className="flex items-center gap-1.5"><Calendar size={10} className="text-brand-primary/40" /> {new Date(a.createdAt).toLocaleDateString()}</span>
-                 <span className="flex items-center gap-1.5"><Clock size={10} className="text-brand-primary/40" /> {new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                 <span className="flex items-center gap-4.5"><Calendar size={10} className="text-brand-primary/40" /> {new Date(a.createdAt).toLocaleDateString('en-GB')}</span>
+                 <span className="flex items-center gap-4.5"><Clock size={10} className="text-brand-primary/40" /> {new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
             </motion.div>
           ))}
